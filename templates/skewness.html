@@ -106,8 +106,8 @@
           <span style="font-family:'Sora',sans-serif;font-weight:800;font-size:1.1rem;" id="hist-skew-val">—</span>
         </div>
       </div>
-      <div style="padding:20px;">
-        <canvas id="hist-canvas" height="160" style="width:100%;"></canvas>
+      <div id="hist-canvas-wrap" style="padding:20px;overflow:hidden;">
+        <canvas id="hist-canvas" data-h="160" style="display:block;"></canvas>
         <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace;">
           <span>← Lower values</span>
           <div id="mean-med-legend" style="display:flex;gap:16px;">
@@ -137,6 +137,7 @@
         <input class="field" id="sk-input" style="flex:1;min-width:200px;" value="1,2,2,3,3,3,5,8,15,35,100,500"/>
         <button onclick="loadSkPreset('income')" style="padding:7px 14px;font-size:0.78rem;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);">💰 Income</button>
         <button onclick="loadSkPreset('age')"    style="padding:7px 14px;font-size:0.78rem;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);">👤 Age at retirement</button>
+        <button onclick="resetPlayground()" style="padding:7px 14px;font-size:0.78rem;border-radius:8px;border:1.5px solid var(--red);background:rgba(244,63,94,0.06);cursor:pointer;color:var(--red);font-weight:700;">↺ Reset</button>
       </div>
 
       <!-- Transform tabs -->
@@ -152,15 +153,15 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div>
           <div style="font-size:0.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Before</div>
-          <div style="background:var(--subtle);border-radius:12px;padding:14px;">
-            <canvas id="sk-before" height="120" style="width:100%;"></canvas>
+          <div id="sk-before-wrap" style="background:var(--subtle);border-radius:12px;padding:14px;">
+            <canvas id="sk-before" data-h="120" style="display:block;"></canvas>
             <div style="font-size:0.72rem;color:var(--muted);margin-top:6px;font-family:'DM Mono',monospace;" id="sk-before-stats"></div>
           </div>
         </div>
         <div>
           <div style="font-size:0.75rem;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">After Transform</div>
-          <div style="background:#F0FDFA;border-radius:12px;padding:14px;border:1px solid rgba(13,148,136,0.2);">
-            <canvas id="sk-after" height="120" style="width:100%;"></canvas>
+          <div id="sk-after-wrap" style="background:#F0FDFA;border-radius:12px;padding:14px;border:1px solid rgba(13,148,136,0.2);">
+            <canvas id="sk-after" data-h="120" style="display:block;"></canvas>
             <div style="font-size:0.72rem;color:var(--teal);margin-top:6px;font-family:'DM Mono',monospace;" id="sk-after-stats"></div>
           </div>
         </div>
@@ -270,46 +271,59 @@ function median(arr) {
   return s.length%2===0?(s[s.length/2-1]+s[s.length/2])/2:s[Math.floor(s.length/2)];
 }
 
-function drawHistogram(canvas, data, color='rgba(13,148,136,0.7)', showMeanMed=true) {
-  const dpr = window.devicePixelRatio||1;
-  canvas.width  = canvas.offsetWidth * dpr;
-  canvas.height = parseInt(canvas.getAttribute('height')||120) * dpr;
+function drawHistogram(canvas, fixedW, data, color='rgba(13,148,136,0.7)', showMeanMed=true) {
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = fixedW;
+  // Read from data-height (never changes) NOT height attribute (gets overwritten by canvas.height=)
+  const cssH = parseInt(canvas.dataset.h || 120);
+  // Pin CSS size so layout never changes
+  canvas.style.width  = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  // Physical pixel buffer
+  const PW = Math.round(cssW * dpr);
+  const PH = Math.round(cssH * dpr);
+  canvas.width  = PW;
+  canvas.height = PH;
+  // Draw everything in physical pixels — no ctx.scale(), no coordinate confusion
   const ctx = canvas.getContext('2d');
-  ctx.scale(dpr,dpr);
-  const W=canvas.offsetWidth, H=parseInt(canvas.getAttribute('height')||120);
-  ctx.clearRect(0,0,W,H);
+  ctx.clearRect(0, 0, PW, PH);
 
-  const minV=Math.min(...data), maxV=Math.max(...data);
-  const BINS=10, binW=(maxV-minV)/BINS||1;
-  const counts=new Array(BINS).fill(0);
-  data.forEach(v=>{ const b=Math.min(Math.floor((v-minV)/binW),BINS-1); counts[b]++; });
-  const maxC=Math.max(...counts,1);
-  const bw=(W-20)/BINS, pad=10;
+  const pad  = 10 * dpr;
+  const bot  = 20 * dpr;
+  const minV = Math.min(...data), maxV = Math.max(...data);
+  const BINS = 10, binW = (maxV - minV) / BINS || 1;
+  const counts = new Array(BINS).fill(0);
+  data.forEach(v => { const b = Math.min(Math.floor((v - minV) / binW), BINS - 1); counts[b]++; });
+  const maxC = Math.max(...counts, 1);
+  const bw = (PW - 2 * pad) / BINS;
 
-  counts.forEach((c,i)=>{
-    const h=((c/maxC)*(H-30));
-    const x=pad+i*bw;
-    ctx.fillStyle=color;
+  counts.forEach((c, i) => {
+    const barH = (c / maxC) * (PH - bot - pad);
+    const x = pad + i * bw;
+    const y = PH - bot - barH;
+    ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.roundRect(x+1, H-h-20, bw-3, h, [4,4,0,0]);
+    const r = 4 * dpr;
+    ctx.roundRect(x + dpr, y, bw - 2 * dpr, barH, [r, r, 0, 0]);
     ctx.fill();
   });
 
   if (showMeanMed) {
-    const mn=data.reduce((a,b)=>a+b,0)/data.length;
-    const med=median(data);
-    const toX=v=>pad+((v-minV)/(maxV-minV||1))*(W-20);
-    [['rgba(244,63,94,0.9)',mn],['rgba(14,165,233,0.9)',med]].forEach(([c,v])=>{
-      ctx.strokeStyle=c; ctx.lineWidth=2; ctx.setLineDash([4,3]);
-      ctx.beginPath(); ctx.moveTo(toX(v),0); ctx.lineTo(toX(v),H-20); ctx.stroke();
+    const mn  = data.reduce((a, b) => a + b, 0) / data.length;
+    const med = (arr => { const s = [...arr].sort((a,b)=>a-b); return s.length%2===0?(s[s.length/2-1]+s[s.length/2])/2:s[Math.floor(s.length/2)]; })(data);
+    const toX = v => pad + ((v - minV) / (maxV - minV || 1)) * (PW - 2 * pad);
+    [[`rgba(244,63,94,0.9)`, mn], [`rgba(14,165,233,0.9)`, med]].forEach(([c, v]) => {
+      ctx.strokeStyle = c; ctx.lineWidth = 2 * dpr; ctx.setLineDash([4 * dpr, 3 * dpr]);
+      ctx.beginPath(); ctx.moveTo(toX(v), 0); ctx.lineTo(toX(v), PH - bot); ctx.stroke();
     });
     ctx.setLineDash([]);
   }
 
   // x-axis
-  ctx.strokeStyle='rgba(226,232,240,0.8)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(pad,H-20); ctx.lineTo(W-pad,H-20); ctx.stroke();
+  ctx.strokeStyle = 'rgba(226,232,240,0.8)'; ctx.lineWidth = dpr;
+  ctx.beginPath(); ctx.moveTo(pad, PH - bot); ctx.lineTo(PW - pad, PH - bot); ctx.stroke();
 }
+
 
 function loadSkewType(type) {
   ['pos','sym','neg'].forEach(t=>document.getElementById('scard-'+t).style.borderColor='var(--border)');
@@ -329,7 +343,7 @@ function loadSkewType(type) {
   sv.textContent=skew;
   sv.style.color=Math.abs(parseFloat(skew))<0.5?'var(--teal)':parseFloat(skew)>0?'var(--red)':'var(--sky)';
 
-  drawHistogram(document.getElementById('hist-canvas'), data, col);
+  drawHistogram(document.getElementById('hist-canvas'), CANVAS_WIDTHS['hist-canvas'], data, col);
 }
 
 /* ══ TRANSFORMATION PLAYGROUND ══ */
@@ -343,6 +357,10 @@ function setTx(tx){
 function loadSkPreset(key){
   document.getElementById('sk-input').value=SK_PRESETS[key].join(',');
   runTransform();
+}
+function resetPlayground(){
+  document.getElementById('sk-input').value='1,2,2,3,3,3,5,8,15,35,100,500';
+  setTx('none');
 }
 
 function applyTransform(arr, tx){
@@ -368,8 +386,8 @@ function runTransform(){
   const skAfter =computeSkewness(transformed).toFixed(3);
   const improved=Math.abs(parseFloat(skAfter))<Math.abs(parseFloat(skBefore));
 
-  drawHistogram(document.getElementById('sk-before'),raw,'rgba(124,58,237,0.6)');
-  drawHistogram(document.getElementById('sk-after'),transformed,'rgba(13,148,136,0.7)');
+  drawHistogram(document.getElementById('sk-before'), CANVAS_WIDTHS['sk-before'], raw,'rgba(124,58,237,0.6)');
+  drawHistogram(document.getElementById('sk-after'), CANVAS_WIDTHS['sk-after'], transformed,'rgba(13,148,136,0.7)');
 
   const mn=v=>v.reduce((a,b)=>a+b,0)/v.length;
   document.getElementById('sk-before-stats').textContent=`skewness=${skBefore} · mean=${mn(raw).toFixed(1)} · median=${median(raw).toFixed(1)}`;
@@ -557,7 +575,28 @@ function clearOutput(){document.getElementById('code-output').style.color='#8b94
 async function copyCode(){try{await navigator.clipboard.writeText(document.getElementById('code-editor').value);const b=document.getElementById('copy-btn');b.textContent='copied!';b.style.color='#7ee787';setTimeout(()=>{b.textContent='copy';b.style.color='';},1800);}catch(e){}}
 function autoHeight(){const ta=document.getElementById('code-editor');ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,460)+'px';}
 
+
+/* ══ CANVAS SIZES — measured once after first paint, never again ══ */
+const CANVAS_WIDTHS = {};
+function initCanvasWidths() {
+  const pairs = [
+    ['sk-before',   'sk-before-wrap',   28],
+    ['sk-after',    'sk-after-wrap',    28],
+    ['hist-canvas', 'hist-canvas-wrap', 40],
+  ];
+  pairs.forEach(([canvasId, wrapId, pad]) => {
+    const wrap = document.getElementById(wrapId);
+    if (!wrap) return;
+    const w = Math.floor(wrap.getBoundingClientRect().width - pad);
+    CANVAS_WIDTHS[canvasId] = w > 50 ? w : Math.floor(wrap.offsetWidth - pad);
+  });
+  console.log('CANVAS_WIDTHS', JSON.stringify(CANVAS_WIDTHS));
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
+  // Use rAF to ensure layout is fully painted before measuring
+  requestAnimationFrame(() => {
+  initCanvasWidths();
   loadSkewType('positive');
   loadSkPreset('income');
   loadEx(0);
@@ -567,6 +606,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runCode();}
   });
   editor.addEventListener('input',autoHeight);
+  }); // end rAF
 });
 </script>
 {% endblock %}
