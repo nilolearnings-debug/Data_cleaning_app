@@ -38,6 +38,10 @@ def groq_chat(system_prompt, messages, max_tokens=500):
     return resp.json()["choices"][0]["message"]["content"].strip()
 
 # ── pages ────────────────────────────────────────────────────────────────────
+@app.route("/ping")
+def ping():
+    return "ok", 200
+
 @app.route("/")
 def index():           return render_template("index.html")
 
