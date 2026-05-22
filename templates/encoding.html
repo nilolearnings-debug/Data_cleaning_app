@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+{% block title %}Encoding — DataClean Academy{% endblock %}
+
+{% block extra_head %}
+<style>
+:root{--teal:#0D9488;--teal-lt:#14B8A6;--sky:#0EA5E9;--violet:#7C3AED;--pink:#EC4899;--red:#F43F5E;--ink:#0F172A;--muted:#64748B;--subtle:#F8FAFC;--border:#E2E8F0;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{0%{transform:scale(0.5);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.en-hero{padding:72px 0 56px;background:#fff;position:relative;overflow:hidden;border-bottom:1.5px solid var(--border);}
+.en-orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;}
+.en-section{padding:60px 0;border-bottom:1.5px solid var(--border);}
+.en-section:last-child{border-bottom:none;}
+
+/* Encoding method cards */
+.enc-card{background:#fff;border:2px solid var(--border);border-radius:18px;padding:22px;cursor:pointer;transition:all 0.22s;}
+.enc-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,0.08);}
+.enc-card.active-label  {border-color:var(--pink);  box-shadow:0 0 0 3px rgba(236,72,153,0.12);}
+.enc-card.active-onehot {border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,0.12);}
+.enc-card.active-ordinal{border-color:var(--sky);   box-shadow:0 0 0 3px rgba(14,165,233,0.12);}
+
+/* Encoding demo table */
+.enc-table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+.enc-table th{background:var(--subtle);padding:9px 14px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);border-bottom:1.5px solid var(--border);}
+.enc-table td{padding:9px 14px;border-bottom:1px solid var(--border);transition:all 0.3s;}
+.enc-cell-cat{color:var(--ink);font-weight:600;}
+.enc-cell-encoded{font-family:'DM Mono',monospace;font-weight:700;border-radius:6px;padding:2px 8px;animation:popIn 0.3s ease;}
+.enc-cell-0{background:rgba(226,232,240,0.5);color:var(--muted);}
+.enc-cell-1{background:rgba(13,148,136,0.1);color:var(--teal);}
+
+/* Category chips */
+.cat-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:10px;font-size:0.8rem;font-weight:600;font-family:'DM Mono',monospace;border:2px solid transparent;cursor:default;}
+
+/* Compiler */
+.ex-tab{padding:7px 14px;border-radius:8px;border:1px solid #30363d;background:#161b22;color:#8b949e;font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.ex-tab:hover{border-color:#8b949e;color:#e6edf3;}
+.ex-tab.active{border-color:var(--pink);background:rgba(236,72,153,0.12);color:#f9a8d4;}
+.running-icon{animation:spin 0.7s linear infinite;}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="en-hero">
+  <div class="en-orb" style="width:520px;height:520px;top:-220px;right:-100px;background:radial-gradient(circle,rgba(236,72,153,0.1),transparent 70%);"></div>
+  <div class="en-orb" style="width:380px;height:380px;bottom:-130px;left:-80px;background:radial-gradient(circle,rgba(124,58,237,0.08),transparent 70%);"></div>
+  <div class="max-w-5xl mx-auto px-6" style="position:relative;z-index:1;" data-aos="fade-up">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <span class="s-label">Module 6 of 6</span>
+      <span class="badge badge-pink">🔤 Encoding</span>
+      <span style="font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace;">~12 min · Interactive</span>
+    </div>
+    <h1 style="font-family:'Sora',sans-serif;font-size:clamp(2.2rem,4.5vw,3.2rem);font-weight:800;letter-spacing:-0.04em;line-height:1.12;color:var(--ink);margin-bottom:16px;">
+      Encoding —<br/>
+      <span style="background:linear-gradient(135deg,var(--pink),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Text → Numbers, Done Right</span>
+    </h1>
+    <p style="font-size:1rem;color:var(--muted);max-width:580px;line-height:1.8;margin-bottom:28px;">ML algorithms can't read "Red", "Blue", or "Engineering". Wrong encoding introduces false ordinal relationships or triggers the dummy variable trap — silently breaking your model.</p>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:32px;">
+      {% for s,l,c in [('3','Encoding methods','var(--pink)'),('⚠','Dummy variable trap','var(--red)'),('🔢','Label→One-Hot→Ordinal','var(--violet)'),('🎮','Click-to-encode demo','var(--teal)')] %}
+      <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,0.04);">
+        <div style="font-family:'Sora',sans-serif;font-size:1.5rem;font-weight:800;color:{{c}};">{{s}}</div>
+        <div style="font-size:0.75rem;color:var(--muted);max-width:90px;line-height:1.4;">{{l}}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      {% for i in range(1,7) %}<div style="flex:1;max-width:72px;"><div style="height:5px;border-radius:9999px;background:linear-gradient(90deg,var(--teal),var(--sky));"></div></div>{% endfor %}
+      <span style="font-size:0.7rem;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap;margin-left:4px;">6 / 6 ✓</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- SECTION 1: ENCODING PLAYGROUND -->
+<section class="en-section">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up">
+      <div class="s-label mb-3">Section 1 · Hands-on</div>
+      <h2 class="s-title mb-2">Encoding Playground 🎮</h2>
+      <p class="s-desc mb-8">Click an encoding method. Watch how the table transforms — the colour coding shows what each number represents. Notice the dummy variable trap warning for One-Hot!</p>
+    </div>
+
+    <!-- Method cards -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;" data-aos="fade-up" data-aos-delay="60">
+      <div class="enc-card active-label" id="ec-label" onclick="setEncMethod('label')">
+        <div style="font-size:1.6rem;margin-bottom:8px;">🏷️</div>
+        <div style="font-family:'Sora',sans-serif;font-weight:800;color:var(--pink);margin-bottom:4px;">Label Encoding</div>
+        <div style="font-size:0.68rem;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:8px;">Red→0 · Blue→1 · Green→2</div>
+        <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;margin-bottom:10px;">Simple integers. Implies a false ordering — Red &lt; Blue &lt; Green.</div>
+        <div style="background:rgba(236,72,153,0.06);border-radius:8px;padding:6px 10px;font-size:0.72rem;font-family:'DM Mono',monospace;color:var(--pink);">Use for: target variable, ordinal data</div>
+      </div>
+      <div class="enc-card" id="ec-onehot" onclick="setEncMethod('onehot')">
+        <div style="font-size:1.6rem;margin-bottom:8px;">🔢</div>
+        <div style="font-family:'Sora',sans-serif;font-weight:800;color:var(--violet);margin-bottom:4px;">One-Hot Encoding</div>
+        <div style="font-size:0.68rem;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:8px;">Red:[1,0,0] Blue:[0,1,0]</div>
+        <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;margin-bottom:10px;">Binary columns per category. No false order. Use drop_first=True!</div>
+        <div style="background:rgba(124,58,237,0.06);border-radius:8px;padding:6px 10px;font-size:0.72rem;font-family:'DM Mono',monospace;color:var(--violet);">Use for: nominal categories, low cardinality</div>
+      </div>
+      <div class="enc-card" id="ec-ordinal" onclick="setEncMethod('ordinal')">
+        <div style="font-size:1.6rem;margin-bottom:8px;">📊</div>
+        <div style="font-family:'Sora',sans-serif;font-weight:800;color:var(--sky);margin-bottom:4px;">Ordinal Encoding</div>
+        <div style="font-size:0.68rem;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:8px;">Low→1 · Mid→2 · High→3</div>
+        <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;margin-bottom:10px;">Integer that reflects a real natural order you define explicitly.</div>
+        <div style="background:rgba(14,165,233,0.06);border-radius:8px;padding:6px 10px;font-size:0.72rem;font-family:'DM Mono',monospace;color:var(--sky);">Use for: education, ratings, satisfaction</div>
+      </div>
+    </div>
+
+    <!-- Encoded table -->
+    <div style="background:#fff;border:1.5px solid var(--border);border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.05);" data-aos="fade-up" data-aos-delay="80">
+      <div style="padding:14px 20px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:0.92rem;" id="enc-table-title">Label Encoding</div>
+          <div style="font-size:0.7rem;color:var(--muted);font-family:'DM Mono',monospace;" id="enc-table-sub">Integers assigned alphabetically</div>
+        </div>
+        <div id="enc-legend" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="enc-table" id="enc-table">
+          <thead id="enc-thead"></thead>
+          <tbody id="enc-tbody"></tbody>
+        </table>
+      </div>
+      <div id="enc-warning" style="display:none;padding:12px 20px;background:rgba(244,63,94,0.05);border-top:1px solid rgba(244,63,94,0.2);">
+        <div style="font-size:0.82rem;color:var(--red);"><strong>⚠️ Dummy Variable Trap:</strong> With 3 categories, you only need 2 columns — the third is always derivable from the other two. Use <code style="background:rgba(244,63,94,0.1);padding:1px 6px;border-radius:4px;font-family:'DM Mono',monospace;">drop_first=True</code> in pd.get_dummies() to avoid multicollinearity.</div>
+      </div>
+    </div>
+
+    <!-- Info strip -->
+    <div id="enc-info-strip" style="margin-top:14px;padding:14px 18px;background:rgba(236,72,153,0.05);border:1.5px solid rgba(236,72,153,0.2);border-radius:12px;font-size:0.84rem;line-height:1.65;" data-aos="fade-up" data-aos-delay="100"></div>
+  </div>
+</section>
+
+
+<!-- SECTION 2: COMPARISON & WHEN TO USE -->
+<section class="en-section" style="background:var(--subtle);">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up">
+      <div class="s-label mb-3">Section 2 · Decision guide</div>
+      <h2 class="s-title mb-2">Which Encoding to Use When?</h2>
+      <p class="s-desc mb-8">The wrong choice introduces bias. Use this guide to pick correctly every time.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" data-aos="fade-up" data-aos-delay="60">
+
+      <!-- Decision flowchart text -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        {% for q,ans,col in [
+          ('Is the column the TARGET variable (y)?','→ Label Encoding always','var(--pink)'),
+          ('Is there a natural meaningful order?','→ Ordinal Encoding (define the order!)','var(--sky)'),
+          ('No order + fewer than ~15 unique values?','→ One-Hot Encoding (drop_first=True)','var(--violet)'),
+          ('No order + many unique values (>15)?','→ Target Encoding or Frequency Encoding','var(--teal)'),
+        ] %}
+        <div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:14px;align-items:flex-start;transition:all 0.2s;" onmouseover="this.style.borderColor='{{col}}'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="min-width:8px;width:8px;height:8px;border-radius:50%;background:{{col}};margin-top:5px;flex-shrink:0;"></div>
+          <div>
+            <div style="font-size:0.84rem;font-weight:600;color:var(--ink);margin-bottom:4px;">{{q}}</div>
+            <div style="font-size:0.8rem;color:{{col}};font-weight:600;font-family:'DM Mono',monospace;">{{ans}}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Quick comparison table -->
+      <div style="background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:22px;">
+        <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:0.95rem;margin-bottom:14px;">Quick Comparison</div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+          <thead><tr style="border-bottom:1.5px solid var(--border);">
+            <th style="text-align:left;padding:7px 10px;color:var(--muted);font-weight:600;font-size:0.7rem;">Method</th>
+            <th style="text-align:left;padding:7px 10px;color:var(--muted);font-weight:600;font-size:0.7rem;">Output</th>
+            <th style="text-align:left;padding:7px 10px;color:var(--muted);font-weight:600;font-size:0.7rem;">False order?</th>
+            <th style="text-align:left;padding:7px 10px;color:var(--muted);font-weight:600;font-size:0.7rem;">Dims?</th>
+          </tr></thead>
+          <tbody>
+            {% for m,out,fo,dims,col in [
+              ('Label','0, 1, 2…','⚠️ Yes','Same','var(--pink)'),
+              ('One-Hot','0/1 cols','✅ None','×n cats','var(--violet)'),
+              ('Ordinal','1, 2, 3…','✅ Correct','Same','var(--sky)'),
+            ] %}
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:8px 10px;"><span class="badge" style="color:{{col}};border-color:{{col}};background:transparent;border:1px solid {{col}};">{{m}}</span></td>
+              <td style="padding:8px 10px;font-family:'DM Mono',monospace;font-size:0.75rem;">{{out}}</td>
+              <td style="padding:8px 10px;">{{fo}}</td>
+              <td style="padding:8px 10px;font-family:'DM Mono',monospace;font-size:0.75rem;">{{dims}}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <!-- Dummy variable trap explainer -->
+        <div style="margin-top:16px;padding:12px 14px;background:rgba(244,63,94,0.05);border:1.5px solid rgba(244,63,94,0.25);border-radius:10px;">
+          <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:0.82rem;color:var(--red);margin-bottom:6px;">⚠️ Dummy Variable Trap</div>
+          <div style="font-size:0.78rem;color:var(--muted);line-height:1.65;">3 categories → 3 columns → one is redundant. If Red=0 and Blue=0, it <em>must</em> be Green. This causes multicollinearity. Always use <code style="background:rgba(244,63,94,0.1);padding:1px 5px;border-radius:3px;font-family:'DM Mono',monospace;">drop_first=True</code>.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- SECTION 3: COMPILER -->
+<section class="en-section" style="background:#0d1117;">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up" style="margin-bottom:28px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:4px 14px;border-radius:20px;background:rgba(236,72,153,0.15);color:#f9a8d4;font-size:0.72rem;font-weight:600;font-family:'DM Mono',monospace;letter-spacing:0.08em;margin-bottom:16px;">⚡ Live Code Compiler</div>
+      <h2 style="font-family:'Sora',sans-serif;font-size:clamp(1.6rem,3vw,2.2rem);font-weight:800;color:#fff;letter-spacing:-0.03em;margin-bottom:10px;">
+        Encode It — <span style="background:linear-gradient(135deg,#f9a8d4,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">See Every Column</span>
+      </h2>
+      <p style="color:#8898aa;font-size:0.92rem;max-width:520px;line-height:1.75;">Real employee DataFrame with categorical columns. Try all three encoding methods and compare their outputs.</p>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;" data-aos="fade-up" data-aos-delay="40">
+      <button class="ex-tab active" id="ex-0" onclick="loadEx(0)">🏷️ Label Encoding</button>
+      <button class="ex-tab"        id="ex-1" onclick="loadEx(1)">🔢 One-Hot Encoding</button>
+      <button class="ex-tab"        id="ex-2" onclick="loadEx(2)">📊 Ordinal Encoding</button>
+      <button class="ex-tab"        id="ex-3" onclick="loadEx(3)">⚠️ Dummy Trap</button>
+      <button class="ex-tab"        id="ex-4" onclick="loadEx(4)">🏆 Target Encoding</button>
+      <button class="ex-tab"        id="ex-5" onclick="loadEx(5)">🔧 Full Pipeline</button>
+    </div>
+
+    <div id="ex-desc-bar" style="background:#161b22;border:1px solid #30363d;border-radius:10px 10px 0 0;padding:10px 18px;font-size:0.82rem;color:#8898aa;border-bottom:none;"></div>
+    <div style="border:1px solid #30363d;border-top:none;background:#0d1117;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #21262d;background:#161b22;">
+        <div style="display:flex;gap:6px;"><div style="width:12px;height:12px;border-radius:50%;background:#ff5f57;"></div><div style="width:12px;height:12px;border-radius:50%;background:#febc2e;"></div><div style="width:12px;height:12px;border-radius:50%;background:#28c840;"></div></div>
+        <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#8b949e;">encoding.py</span>
+        <div style="display:flex;gap:8px;">
+          <button onclick="copyCode()" id="copy-btn" style="padding:4px 10px;font-size:0.72rem;border-radius:6px;border:1px solid #30363d;background:transparent;color:#8b949e;cursor:pointer;font-family:'DM Mono',monospace;">copy</button>
+          <button onclick="runCode()" id="run-btn" style="padding:6px 18px;font-size:0.8rem;border-radius:8px;border:none;background:linear-gradient(135deg,var(--pink),var(--violet));color:#fff;cursor:pointer;font-family:'Sora',sans-serif;font-weight:700;display:flex;align-items:center;gap:6px;"><span id="run-icon">▶</span> Run</button>
+        </div>
+      </div>
+      <textarea id="code-editor" spellcheck="false" style="width:100%;min-height:260px;max-height:460px;background:#0d1117;color:#e6edf3;border:none;outline:none;resize:vertical;padding:20px;font-family:'DM Mono',monospace;font-size:0.82rem;line-height:1.75;tab-size:4;"></textarea>
+    </div>
+    <div style="border:1px solid #30363d;border-top:none;border-radius:0 0 14px 14px;background:#010409;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #21262d;background:#0d1117;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#8b949e;display:flex;align-items:center;gap:6px;"><div style="width:7px;height:7px;border-radius:50%;background:#28c840;" id="status-dot"></div><span id="status-txt">Ready</span></div>
+        <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#484f58;" id="exec-time"></span>
+      </div>
+      <pre id="code-output" style="margin:0;padding:20px;min-height:110px;max-height:340px;overflow-y:auto;font-family:'DM Mono',monospace;font-size:0.8rem;line-height:1.75;color:#7ee787;white-space:pre-wrap;word-break:break-word;background:#010409;">&#9658; Output will appear here after you click Run...</pre>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;">
+      <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px;"><div style="font-size:0.7rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;font-family:'DM Mono',monospace;">Pre-imported</div><div style="font-size:0.78rem;color:#8b949e;">numpy · pandas · sklearn preprocessing</div></div>
+      <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px;"><div style="font-size:0.7rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;font-family:'DM Mono',monospace;">Shortcut</div><div style="font-size:0.78rem;color:#8b949e;"><code style="color:#f9a8d4;">Ctrl+Enter</code> to run · <code style="color:#f9a8d4;">Tab</code> to indent</div></div>
+      <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px;"><div style="font-size:0.7rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;font-family:'DM Mono',monospace;">Challenge</div><div style="font-size:0.78rem;color:#8b949e;">Change drop_first=True to False — see the trap!</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- NAV -->
+<div class="max-w-5xl mx-auto px-6 py-10">
+  <div class="nav-btns">
+    <a href="/scaling" class="btn-outline">← Feature Scaling</a>
+    <a href="/" class="btn-outline">🏠 Home</a>
+    <a href="/quiz" class="btn-violet">🧠 Take the Quiz →</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ══ ENCODING PLAYGROUND DATA ══ */
+const ENC_DATA = [
+  {name:'Alice',  dept:'Engineering', level:'Senior', city:'Chennai'},
+  {name:'Bob',    dept:'Marketing',   level:'Junior', city:'Mumbai'},
+  {name:'Carol',  dept:'Engineering', level:'Mid',    city:'Delhi'},
+  {name:'David',  dept:'HR',          level:'Senior', city:'Chennai'},
+  {name:'Emma',   dept:'Marketing',   level:'Mid',    city:'Mumbai'},
+  {name:'Frank',  dept:'Engineering', level:'Junior', city:'Delhi'},
+];
+
+const DEPT_MAP  = {Engineering:0, HR:1, Marketing:2};
+const LEVEL_MAP = {Junior:1, Mid:2, Senior:3};
+const CITY_MAP  = {Chennai:0, Delhi:1, Mumbai:2};
+
+const DEPT_COLORS  = {Engineering:'var(--teal)',  HR:'var(--violet)', Marketing:'var(--pink)'};
+const LEVEL_COLORS = {Junior:'var(--sky)',         Mid:'#F59E0B',      Senior:'var(--teal)'};
+
+let encMethod = 'label';
+
+function setEncMethod(m) {
+  encMethod = m;
+  ['label','onehot','ordinal'].forEach(x => {
+    document.getElementById('ec-'+x).className = 'enc-card' + (x===m ? ' active-'+x : '');
+  });
+  renderEncTable();
+}
+
+function renderEncTable() {
+  const thead = document.getElementById('enc-thead');
+  const tbody = document.getElementById('enc-tbody');
+  const warn  = document.getElementById('enc-warning');
+  const leg   = document.getElementById('enc-legend');
+  const info  = document.getElementById('enc-info-strip');
+  const title = document.getElementById('enc-table-title');
+  const sub   = document.getElementById('enc-table-sub');
+
+  warn.style.display = 'none';
+
+  if (encMethod === 'label') {
+    title.textContent = 'Label Encoding';
+    sub.textContent   = 'Each unique category → integer (alphabetical order)';
+    info.style.background = 'rgba(236,72,153,0.04)';
+    info.style.borderColor= 'rgba(236,72,153,0.2)';
+    info.innerHTML = '<strong style="color:var(--pink);">🏷️ Label Encoding:</strong> Fast and memory-efficient. But it implies Engineering(0) &lt; HR(1) &lt; Marketing(2) — which is <strong>meaningless</strong>. Tree-based models handle this fine; linear models will be misled. Only use for the target variable or truly ordinal features.';
+
+    leg.innerHTML = Object.entries(DEPT_MAP).map(([k,v])=>
+      `<span class="cat-chip" style="background:rgba(0,0,0,0.04);color:${DEPT_COLORS[k]};border-color:${DEPT_COLORS[k]};">${k}→${v}</span>`
+    ).join('');
+
+    thead.innerHTML = `<tr><th>Name</th><th>dept</th><th>dept_encoded</th><th>level</th><th>level_encoded</th></tr>`;
+    tbody.innerHTML = ENC_DATA.map(r => `<tr>
+      <td style="font-weight:600;">${r.name}</td>
+      <td class="enc-cell-cat">${r.dept}</td>
+      <td><span class="enc-cell-encoded" style="background:${DEPT_COLORS[r.dept]}20;color:${DEPT_COLORS[r.dept]};">${DEPT_MAP[r.dept]}</span></td>
+      <td class="enc-cell-cat">${r.level}</td>
+      <td><span class="enc-cell-encoded" style="background:${LEVEL_COLORS[r.level]}20;color:${LEVEL_COLORS[r.level]};">${LEVEL_MAP[r.level]}</span></td>
+    </tr>`).join('');
+
+  } else if (encMethod === 'onehot') {
+    title.textContent = 'One-Hot Encoding (with drop_first=True)';
+    sub.textContent   = 'One binary column per category — no false ordering';
+    warn.style.display = 'block';
+    info.style.background = 'rgba(124,58,237,0.04)';
+    info.style.borderColor= 'rgba(124,58,237,0.2)';
+    info.innerHTML = '<strong style="color:var(--violet);">🔢 One-Hot Encoding:</strong> Correct for nominal (unordered) categories like city or color. Creates n−1 columns when drop_first=True (avoids dummy trap). Downside: high cardinality (50 cities → 49 columns) causes dimensionality explosion. Use target encoding or binary encoding for high-cardinality columns.';
+
+    const depts = ['HR','Marketing'];       // Engineering dropped (first)
+    const cities = ['Delhi','Mumbai'];       // Chennai dropped (first)
+    leg.innerHTML = `<span style="font-size:0.72rem;color:var(--muted);">1=present · 0=absent · Engineering/Chennai dropped (drop_first)</span>`;
+
+    thead.innerHTML = `<tr><th>Name</th>${depts.map(d=>`<th>dept_${d}</th>`).join('')}${cities.map(c=>`<th>city_${c}</th>`).join('')}<th>level_encoded</th></tr>`;
+    tbody.innerHTML = ENC_DATA.map(r => {
+      const deptCols  = depts.map(d => {
+        const v = r.dept===d?1:0;
+        return `<td><span class="enc-cell-encoded enc-cell-${v}">${v}</span></td>`;
+      }).join('');
+      const cityCols  = cities.map(c => {
+        const v = r.city===c?1:0;
+        return `<td><span class="enc-cell-encoded enc-cell-${v}">${v}</span></td>`;
+      }).join('');
+      return `<tr><td style="font-weight:600;">${r.name}</td>${deptCols}${cityCols}<td><span class="enc-cell-encoded" style="background:${LEVEL_COLORS[r.level]}20;color:${LEVEL_COLORS[r.level]};">${LEVEL_MAP[r.level]}</span></td></tr>`;
+    }).join('');
+
+  } else {
+    title.textContent = 'Ordinal Encoding';
+    sub.textContent   = 'Integers that reflect a real, meaningful order';
+    info.style.background = 'rgba(14,165,233,0.04)';
+    info.style.borderColor= 'rgba(14,165,233,0.2)';
+    info.innerHTML = '<strong style="color:var(--sky);">📊 Ordinal Encoding:</strong> Correct when the order is real — Junior &lt; Mid &lt; Senior is a genuine hierarchy. You must define the order explicitly using OrdinalEncoder(categories=[...]) in sklearn. Never let the encoder pick the order automatically for ordinal data!';
+
+    leg.innerHTML = ['Junior→1','Mid→2','Senior→3'].map(t=>
+      `<span class="cat-chip" style="background:rgba(14,165,233,0.08);color:var(--sky);border-color:rgba(14,165,233,0.3);">${t}</span>`
+    ).join('');
+
+    thead.innerHTML = `<tr><th>Name</th><th>level (original)</th><th>level_encoded</th><th>dept</th><th>dept_encoded</th></tr>`;
+    tbody.innerHTML = ENC_DATA.map(r => `<tr>
+      <td style="font-weight:600;">${r.name}</td>
+      <td class="enc-cell-cat">${r.level}</td>
+      <td><span class="enc-cell-encoded" style="background:${LEVEL_COLORS[r.level]}20;color:${LEVEL_COLORS[r.level]};">${LEVEL_MAP[r.level]}</span></td>
+      <td class="enc-cell-cat">${r.dept}</td>
+      <td><span class="enc-cell-encoded" style="background:rgba(0,0,0,0.04);color:var(--muted);">${DEPT_MAP[r.dept]}</span></td>
+    </tr>`).join('');
+  }
+}
+
+/* ══ CODE EXAMPLES ══ */
+const EXAMPLES = [
+  {tab:'🏷️ Label Encoding', desc:'— Convert categorical target or ordinal features to integers.',
+   code:`from sklearn.preprocessing import LabelEncoder
+
+df = pd.DataFrame({
+    'name':  ['Alice','Bob','Carol','David','Emma','Frank'],
+    'dept':  ['Engineering','Marketing','Engineering','HR','Marketing','Engineering'],
+    'level': ['Senior','Junior','Mid','Senior','Mid','Junior'],
+    'hired': ['Yes','No','Yes','Yes','No','Yes']
+})
+
+print("=== Original DataFrame ===")
+print(df.to_string(index=False))
+
+# Label encode the target variable (hired)
+le = LabelEncoder()
+df['hired_encoded'] = le.fit_transform(df['hired'])
+
+print("=== After Label Encoding (target) ===")
+print(df[['name','hired','hired_encoded']].to_string(index=False))
+print(f"Mapping: {dict(zip(le.classes_, le.transform(le.classes_)))}")
+
+# WARNING: don't use label encoding for dept (unordered!)
+df['dept_encoded'] = le.fit_transform(df['dept'])
+print("=== dept Label Encoding (incorrect for nominal!) ===")
+print(df[['dept','dept_encoded']].drop_duplicates().to_string(index=False))
+print("  Engineering=0, HR=1, Marketing=2")
+print("  This implies Eng < HR < Marketing — WRONG for nominal data!")`
+  },
+  {tab:'🔢 One-Hot Encoding', desc:'— Binary columns for each category. No false ordering.',
+   code:`df = pd.DataFrame({
+    'name':  ['Alice','Bob','Carol','David','Emma','Frank'],
+    'dept':  ['Engineering','Marketing','Engineering','HR','Marketing','Engineering'],
+    'city':  ['Chennai','Mumbai','Delhi','Chennai','Mumbai','Delhi'],
+    'score': [87, 74, 91, 85, 78, 82]
+})
+
+print("=== Original ===")
+print(df.to_string(index=False))
+
+# One-hot encode dept and city
+# drop_first=True avoids the dummy variable trap!
+df_encoded = pd.get_dummies(df, columns=['dept','city'], drop_first=True)
+
+print("=== After One-Hot Encoding (drop_first=True) ===")
+print(df_encoded.to_string(index=False))
+
+print(f"Original shape: {df.shape}")
+print(f"Encoded shape:  {df_encoded.shape}")
+print("  Engineering and Chennai are the 'reference' categories (dropped)")
+print("  dept_HR=0, dept_Marketing=0 ->  must be Engineering (inferred)")`
+  },
+  {tab:'📊 Ordinal Encoding', desc:'— Encode ordered categories while preserving the real hierarchy.',
+   code:`from sklearn.preprocessing import OrdinalEncoder
+
+df = pd.DataFrame({
+    'name':      ['Alice','Bob','Carol','David','Emma','Frank'],
+    'level':     ['Senior','Junior','Mid','Senior','Mid','Junior'],
+    'education': ['Masters','Bachelors','PhD','Masters','Bachelors','PhD'],
+    'rating':    ['Excellent','Good','Average','Excellent','Good','Average']
+})
+
+print("=== Original ===")
+print(df.to_string(index=False))
+
+# IMPORTANT: define the order explicitly!
+level_order     = ['Junior','Mid','Senior']
+education_order = ['Bachelors','Masters','PhD']
+rating_order    = ['Average','Good','Excellent']
+
+oe = OrdinalEncoder(categories=[level_order, education_order, rating_order])
+encoded = oe.fit_transform(df[['level','education','rating']])
+
+df['level_enc']     = encoded[:,0].astype(int)
+df['education_enc'] = encoded[:,1].astype(int)
+df['rating_enc']    = encoded[:,2].astype(int)
+
+print("=== After Ordinal Encoding ===")
+print(df.to_string(index=False))
+print("  Junior=0, Mid=1, Senior=2  (correct ordering!)")
+print("  Bachelors=0, Masters=1, PhD=2  (correct ordering!)")`
+  },
+  {tab:'⚠️ Dummy Trap', desc:'— See the dummy variable trap in action and how to fix it.',
+   code:`df = pd.DataFrame({'color': ['Red','Blue','Green','Red','Green','Blue']})
+
+# WITHOUT drop_first (wrong — creates the trap!)
+df_trap = pd.get_dummies(df, columns=['color'], drop_first=False)
+print("=== WITHOUT drop_first (3 columns — TRAP!) ===")
+print(df_trap.to_string(index=False))
+print("  color_Red=0, color_Blue=0 ->  MUST be Green")
+print("  color_Green is redundant — perfect multicollinearity!")
+
+# WITH drop_first (correct!)
+df_fixed = pd.get_dummies(df, columns=['color'], drop_first=True)
+print("=== WITH drop_first=True (2 columns — CORRECT!) ===")
+print(df_fixed.to_string(index=False))
+print("  color_Blue=0, color_Green=0 ->  inferred as Red")
+
+# Verify: check correlation in trap version
+print("=== Correlation check (trap version) ===")
+corr = df_trap.corr().round(2)
+print(corr.to_string())
+print("  High correlations between dummy cols = multicollinearity confirmed!")`
+  },
+  {tab:'🏆 Target Encoding', desc:'— For high-cardinality columns. Replace category with target mean.',
+   code:`# Target encoding: replace each category with the mean of the target variable
+# Useful when a column has many unique values (>15) — avoids dimensionality explosion
+
+df = pd.DataFrame({
+    'city':   ['Chennai','Mumbai','Delhi','Chennai','Bangalore','Mumbai',
+                'Delhi','Hyderabad','Chennai','Bangalore'],
+    'salary': [45000, 75000, 55000, 48000, 65000, 72000,
+               52000, 58000, 46000, 68000]
+})
+
+print("=== Original (10 unique cities is manageable, imagine 500) ===")
+print(df.to_string(index=False))
+
+# Compute target mean per category (on TRAIN data only in practice!)
+target_mean = df.groupby('city')['salary'].mean()
+print("=== City-> Mean Salary mapping ===")
+print(target_mean.round(0).to_string())
+
+df['city_encoded'] = df['city'].map(target_mean)
+
+print("=== After Target Encoding ===")
+print(df[['city','salary','city_encoded']].to_string(index=False))
+print("One column instead of 9 one-hot columns!")
+print("Risk: data leakage — fit the encoder on TRAIN data only")`
+  },
+  {tab:'🔧 Full Pipeline', desc:'— Handle mixed columns (numeric + categorical) in one sklearn Pipeline.',
+   code:`from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
+
+df = pd.DataFrame({
+    'age':    [28, 35, 31, 45, 29, 38, 42, 26],
+    'salary': [32000, 75000, 45000, 90000, 34000, 52000, 68000, 30000],
+    'dept':   ['Eng','Mkt','Eng','HR','Mkt','Eng','HR','Mkt'],
+    'level':  ['Junior','Senior','Mid','Senior','Junior','Mid','Senior','Junior'],
+    'hired':  [1, 1, 1, 1, 0, 1, 1, 0]
+})
+
+X = df.drop('hired', axis=1)
+y = df['hired']
+
+# Define transformers for each column type
+numeric_features  = ['age','salary']
+nominal_features  = ['dept']           # no order
+ordinal_features  = ['level']          # Junior < Mid < Senior
+
+preprocessor = ColumnTransformer(transformers=[
+    ('num',     StandardScaler(),
+                numeric_features),
+    ('nominal', OneHotEncoder(drop='first', sparse_output=False),
+                nominal_features),
+    ('ordinal', OrdinalEncoder(categories=[['Junior','Mid','Senior']]),
+                ordinal_features),
+])
+
+pipe = Pipeline([('prep', preprocessor), ('model', LogisticRegression(random_state=0))])
+pipe.fit(X, y)
+
+print("=== Pipeline trained successfully ===")
+print(f"  Numeric features:  {numeric_features}")
+print(f"  Nominal (one-hot): {nominal_features}")
+print(f"  Ordinal encoded:   {ordinal_features}")
+
+X_transformed = preprocessor.fit_transform(X)
+print(f"Input shape:  {X.shape}")
+print(f"Output shape: {X_transformed.shape}")
+print("Correct: each column type gets the right treatment")`
+  },
+];
+
+let currentEx=0;
+function loadEx(i){
+  currentEx=i;
+  document.querySelectorAll('.ex-tab').forEach((t,ti)=>t.classList.toggle('active',ti===i));
+  document.getElementById('code-editor').value=EXAMPLES[i].code;
+  document.getElementById('ex-desc-bar').innerHTML=`<span style="color:#f9a8d4;font-weight:600;">${EXAMPLES[i].tab}</span><span style="color:#8b949e;"> ${EXAMPLES[i].desc}</span>`;
+  clearOutput(); autoHeight();
+}
+async function runCode(){
+  const btn=document.getElementById('run-btn'),icon=document.getElementById('run-icon');
+  const out=document.getElementById('code-output'),dot=document.getElementById('status-dot');
+  const stat=document.getElementById('status-txt'),time=document.getElementById('exec-time');
+  btn.disabled=true;icon.textContent='⟳';icon.classList.add('running-icon');
+  dot.style.background='#F59E0B';stat.textContent='Running…';out.style.color='#8b949e';out.textContent='Executing…';time.textContent='';
+  const t0=Date.now();
+  try{
+    const r=await fetch('/api/run-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:document.getElementById('code-editor').value})});
+    if(!r.ok) throw new Error(`Server ${r.status}: ${(await r.text()).substring(0,120)}`);
+    const d=await r.json(); time.textContent=`${Date.now()-t0}ms`;
+    if(d.error?.trim()){out.style.color='#ff7b72';dot.style.background='#F43F5E';stat.textContent='Error';out.textContent='✗  '+d.error.trim();}
+    else{out.style.color='#7ee787';dot.style.background='#28c840';stat.textContent='Done ✓';out.textContent=d.output?.trim()||'(no output)';}
+  }catch(err){out.style.color='#ff7b72';dot.style.background='#F43F5E';stat.textContent='Error';out.textContent='✗  '+err.message;}
+  finally{btn.disabled=false;icon.textContent='▶';icon.classList.remove('running-icon');}
+}
+function clearOutput(){document.getElementById('code-output').style.color='#8b949e';document.getElementById('code-output').textContent='\u25b8 Output will appear here after you click Run...';document.getElementById('status-dot').style.background='#28c840';document.getElementById('status-txt').textContent='Ready';document.getElementById('exec-time').textContent='';}
+async function copyCode(){try{await navigator.clipboard.writeText(document.getElementById('code-editor').value);const b=document.getElementById('copy-btn');b.textContent='copied!';b.style.color='#7ee787';setTimeout(()=>{b.textContent='copy';b.style.color='';},1800);}catch(e){}}
+function autoHeight(){const ta=document.getElementById('code-editor');ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,460)+'px';}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  renderEncTable();
+  loadEx(0);
+  const editor=document.getElementById('code-editor');
+  editor.addEventListener('keydown',e=>{
+    if(e.key==='Tab'){e.preventDefault();const s=editor.selectionStart,en=editor.selectionEnd;editor.value=editor.value.substring(0,s)+'    '+editor.value.substring(en);editor.selectionStart=editor.selectionEnd=s+4;}
+    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runCode();}
+  });
+  editor.addEventListener('input',autoHeight);
+});
+</script>
+{% endblock %}

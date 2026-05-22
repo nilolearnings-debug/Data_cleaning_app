@@ -1,0 +1,832 @@
+{% extends "base.html" %}
+{% block title %}Duplicates — DataClean Academy{% endblock %}
+
+{% block extra_head %}
+<style>
+:root{--teal:#0D9488;--teal-lt:#14B8A6;--sky:#0EA5E9;--violet:#7C3AED;--pink:#EC4899;--red:#F43F5E;--ink:#0F172A;--muted:#64748B;--subtle:#F8FAFC;--border:#E2E8F0;}
+
+@keyframes fadeUp    { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes shake     { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
+@keyframes strikeRow { from{opacity:1} to{opacity:0;transform:translateX(40px)} }
+@keyframes popIn     { 0%{transform:scale(0.5);opacity:0} 70%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+@keyframes blink-red { 0%,100%{box-shadow:0 0 0 0 rgba(244,63,94,0.4)} 50%{box-shadow:0 0 0 6px rgba(244,63,94,0)} }
+@keyframes gradShift { 0%{background-position:0 0} 100%{background-position:200% 0} }
+@keyframes spin      { to{transform:rotate(360deg)} }
+
+/* Hero */
+.dup-hero{padding:72px 0 56px;background:#fff;position:relative;overflow:hidden;border-bottom:1.5px solid var(--border);}
+.dup-orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;}
+.orb-a{width:520px;height:520px;top:-220px;right:-100px;background:radial-gradient(circle,rgba(14,165,233,0.09),transparent 70%);}
+.orb-b{width:380px;height:380px;bottom:-120px;left:-80px;background:radial-gradient(circle,rgba(236,72,153,0.07),transparent 70%);}
+
+/* Section divider */
+.d-section{padding:60px 0;border-bottom:1.5px solid var(--border);}
+.d-section:last-child{border-bottom:none;}
+
+/* Data table */
+.dup-table{width:100%;border-collapse:collapse;font-size:0.83rem;}
+.dup-table th{background:var(--subtle);padding:10px 14px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);border-bottom:1.5px solid var(--border);}
+.dup-table td{padding:10px 14px;border-bottom:1px solid var(--border);transition:background 0.2s;}
+.dup-table tr.is-dup td{background:rgba(244,63,94,0.06);color:var(--muted);}
+.dup-table tr.is-dup.shake-it{animation:shake 0.4s ease;}
+.dup-table tr.removing{animation:strikeRow 0.5s ease forwards;}
+.dup-table tr.is-unique td{background:rgba(13,148,136,0.04);}
+.dup-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:700;font-family:'DM Mono',monospace;}
+.dup-badge.dup{background:rgba(244,63,94,0.1);color:var(--red);border:1px solid rgba(244,63,94,0.3);animation:blink-red 2s infinite;}
+.dup-badge.uniq{background:rgba(13,148,136,0.1);color:var(--teal);border:1px solid rgba(13,148,136,0.3);}
+.dup-badge.first{background:rgba(14,165,233,0.1);color:var(--sky);border:1px solid rgba(14,165,233,0.3);}
+
+/* Mode tabs */
+.mode-tab{flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;transition:all 0.2s;text-align:center;font-family:'Sora',sans-serif;font-weight:700;font-size:0.82rem;color:var(--muted);}
+.mode-tab:hover{border-color:var(--sky);color:var(--sky);}
+.mode-tab.active{border-color:var(--sky);background:rgba(14,165,233,0.08);color:var(--sky);box-shadow:0 0 0 3px rgba(14,165,233,0.1);}
+
+/* Stat counters */
+.stat-counter{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:18px 20px;text-align:center;transition:all 0.3s;}
+
+/* Code compiler */
+.ex-tab{padding:7px 14px;border-radius:8px;border:1px solid #30363d;background:#161b22;color:#8b949e;font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.ex-tab:hover{border-color:#8b949e;color:#e6edf3;}
+.ex-tab.active{border-color:var(--sky);background:rgba(14,165,233,0.15);color:#7dd3fc;}
+@keyframes blink-cursor{0%,100%{opacity:1}50%{opacity:0}}
+.running-icon{animation:spin 0.7s linear infinite;}
+
+/* Impact animation */
+.impact-row{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;background:#fff;border-radius:12px;border:1.5px solid rgba(244,63,94,0.12);transition:all 0.3s;}
+.impact-row:hover{border-color:rgba(244,63,94,0.4);transform:translateX(4px);}
+
+/* Subset badge toggle */
+.col-badge{display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:0.78rem;font-weight:600;font-family:'DM Mono',monospace;cursor:pointer;transition:all 0.2s;color:var(--muted);}
+.col-badge.selected{border-color:var(--violet);background:rgba(124,58,237,0.08);color:var(--violet);}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="dup-hero">
+  <div class="dup-orb orb-a"></div>
+  <div class="dup-orb orb-b"></div>
+  <div class="max-w-5xl mx-auto px-6" style="position:relative;z-index:1;" data-aos="fade-up">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <span class="s-label">Module 2 of 6</span>
+      <span class="badge badge-sky">🔁 Duplicates</span>
+      <span style="font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace;">~12 min · Interactive</span>
+    </div>
+    <h1 style="font-family:'Sora',sans-serif;font-size:clamp(2.2rem,4.5vw,3.2rem);font-weight:800;letter-spacing:-0.04em;line-height:1.12;color:var(--ink);margin-bottom:16px;">
+      Duplicate Rows —<br/>
+      <span style="background:linear-gradient(135deg,var(--sky),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Spot, Flag & Remove</span>
+    </h1>
+    <p style="font-size:1rem;color:var(--muted);max-width:580px;line-height:1.8;margin-bottom:32px;">Duplicates inflate counts, distort statistics, and cause ML models to overfit on repeated patterns. They sneak in silently — learn to catch and remove them systematically.</p>
+
+    <!-- Stats -->
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:36px;">
+      {% for stat,label,col in [('3','Ways duplicates enter data','var(--sky)'),('2','Detection strategies','var(--violet)'),('4','keep= options in pandas','var(--teal)'),('🎮','Live interactive table','var(--pink)')] %}
+      <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,0.04);">
+        <div style="font-family:'Sora',sans-serif;font-size:1.5rem;font-weight:800;color:{{col}};">{{stat}}</div>
+        <div style="font-size:0.75rem;color:var(--muted);max-width:90px;line-height:1.4;">{{label}}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Progress bar -->
+    <div style="display:flex;align-items:center;gap:8px;">
+      {% for i in range(1,7) %}
+      <div style="flex:1;max-width:72px;"><div style="height:5px;border-radius:9999px;background:{% if i<=2 %}linear-gradient(90deg,var(--teal),var(--sky)){% else %}var(--border){% endif %};"></div></div>
+      {% endfor %}
+      <span style="font-size:0.7rem;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap;margin-left:4px;">2 / 6</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- SECTION 1: VISUAL PLAYGROUND -->
+<section class="d-section">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up">
+      <div class="s-label mb-3">Section 1 · See it live</div>
+      <h2 class="s-title mb-2">Interactive Duplicate Detector 🎮</h2>
+      <p class="s-desc mb-8">This is a customer orders dataset. Duplicates are already highlighted in red. Choose a detection mode, then click <strong>Remove Duplicates</strong> to watch them disappear.</p>
+    </div>
+
+    <!-- Mode selector -->
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;" data-aos="fade-up" data-aos-delay="60">
+      <div class="mode-tab active" id="mode-full"   onclick="setMode('full')">🔍 Full Row Match</div>
+      <div class="mode-tab"        id="mode-subset" onclick="setMode('subset')">🎯 Subset Match</div>
+    </div>
+
+    <!-- Subset column picker (hidden until subset mode) -->
+    <div id="subset-picker" style="display:none;margin-bottom:16px;background:rgba(124,58,237,0.04);border:1.5px solid rgba(124,58,237,0.2);border-radius:14px;padding:16px 20px;" data-aos="fade-up">
+      <div style="font-size:0.82rem;font-weight:600;color:var(--violet);margin-bottom:10px;">Select columns to check for duplicates:</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="col-badges"></div>
+      <div style="font-size:0.75rem;color:var(--muted);margin-top:8px;">💡 Try selecting just <strong>name + email</strong> — David and David Jr. have the same email!</div>
+    </div>
+
+    <!-- Dataset table card -->
+    <div style="background:#fff;border:1.5px solid var(--border);border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.05);" data-aos="fade-up" data-aos-delay="80">
+
+      <!-- Table toolbar -->
+      <div style="padding:14px 20px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:0.92rem;">orders.csv</div>
+          <div style="font-size:0.7rem;color:var(--muted);font-family:'DM Mono',monospace;" id="table-meta">10 rows · scanning…</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:0.7rem;padding:3px 10px;border-radius:20px;background:rgba(244,63,94,0.08);color:var(--red);border:1px solid rgba(244,63,94,0.25);">■ red = duplicate (will be removed)</span>
+          <span style="font-size:0.7rem;padding:3px 10px;border-radius:20px;background:rgba(14,165,233,0.08);color:var(--sky);border:1px solid rgba(14,165,233,0.25);">■ blue = kept (first occurrence)</span>
+          <button onclick="resetTable()" style="padding:5px 12px;font-size:0.72rem;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);">↺ Reset</button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div style="overflow-x:auto;">
+        <table class="dup-table" id="dup-table">
+          <thead><tr>
+            <th>#</th><th>Name</th><th>Email</th><th>Product</th><th>Amount</th><th>Date</th><th>Status</th>
+          </tr></thead>
+          <tbody id="dup-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Action bar -->
+      <div style="padding:14px 20px;border-top:1px solid var(--border);background:var(--subtle);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <div class="stat-counter" style="padding:10px 16px;">
+            <div style="font-family:'Sora',sans-serif;font-weight:800;font-size:1.5rem;color:var(--ink);" id="cnt-total">10</div>
+            <div style="font-size:0.7rem;color:var(--muted);">Total rows</div>
+          </div>
+          <div class="stat-counter" style="padding:10px 16px;border-color:rgba(244,63,94,0.3);background:rgba(244,63,94,0.03);">
+            <div style="font-family:'Sora',sans-serif;font-weight:800;font-size:1.5rem;color:var(--red);" id="cnt-dup">0</div>
+            <div style="font-size:0.7rem;color:var(--muted);">Duplicates</div>
+          </div>
+          <div class="stat-counter" style="padding:10px 16px;border-color:rgba(13,148,136,0.3);background:rgba(13,148,136,0.03);">
+            <div style="font-family:'Sora',sans-serif;font-weight:800;font-size:1.5rem;color:var(--teal);" id="cnt-clean">10</div>
+            <div style="font-size:0.7rem;color:var(--muted);">After clean</div>
+          </div>
+        </div>
+        <button onclick="removeDuplicates()" id="remove-btn" class="btn-primary" style="padding:10px 24px;font-size:0.88rem;">
+          🗑️ Remove Duplicates
+        </button>
+      </div>
+    </div>
+
+    <!-- Explanation strip -->
+    <div id="mode-explain" style="margin-top:14px;padding:14px 18px;background:rgba(14,165,233,0.05);border:1.5px solid rgba(14,165,233,0.2);border-radius:12px;font-size:0.84rem;color:var(--ink);line-height:1.65;" data-aos="fade-up" data-aos-delay="100">
+      <strong style="color:var(--sky);">🔍 Full Row Match:</strong> All 6 columns must be identical for a row to count as a duplicate. This is the strictest check — even one different field means it's kept.
+    </div>
+  </div>
+</section>
+
+
+<!-- SECTION 2: WHY & IMPACT -->
+<section class="d-section" style="background:var(--subtle);">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up">
+      <div class="s-label mb-3">Section 2 · The "Why"</div>
+      <h2 class="s-title mb-2">Why Duplicates Are Dangerous</h2>
+      <p class="s-desc mb-8">They don't throw errors. They look like normal data. That's what makes them so harmful.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" data-aos="fade-up" data-aos-delay="60">
+      <!-- Causes -->
+      <div>
+        <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:1rem;color:var(--ink);margin-bottom:14px;">🔍 How They Get In</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          {% for icon,title,desc in [
+            ('🔄','Data Merging','Joining two datasets with overlapping records silently creates copies.'),
+            ('📡','API Retries','A failed HTTP request retried = same record inserted twice.'),
+            ('📋','Manual Entry','The same customer entered twice in a spreadsheet by two teams.'),
+            ('💾','System Failures','DB write fails, triggers a retry → duplicate row committed.'),
+          ] %}
+          <div style="display:flex;gap:12px;background:#fff;border-radius:12px;padding:14px;border:1.5px solid var(--border);transition:all 0.2s;" onmouseover="this.style.borderColor='var(--sky)';this.style.transform='translateX(4px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
+            <div style="font-size:1.4rem;flex-shrink:0;">{{icon}}</div>
+            <div>
+              <div style="font-weight:700;font-size:0.88rem;margin-bottom:3px;">{{title}}</div>
+              <div style="font-size:0.8rem;color:var(--muted);line-height:1.55;">{{desc}}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Impact -->
+      <div>
+        <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:1rem;color:var(--red);margin-bottom:14px;">⚠️ What They Break</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          {% for icon,title,desc in [
+            ('📈','Inflated Counts','df.value_counts() and groupby() show wrong totals — customers counted twice.'),
+            ('📉','Biased ML Models','Models see the same pattern multiple times → overfit and underperform on new data.'),
+            ('📊','Wrong Statistics','Mean, median, std — all distorted when duplicate rows skew the distribution.'),
+            ('💰','Business Errors','Revenue double-counted, users sent duplicate emails, KPIs report incorrectly.'),
+          ] %}
+          <div class="impact-row">
+            <div style="font-size:1.4rem;flex-shrink:0;">{{icon}}</div>
+            <div>
+              <div style="font-weight:700;font-size:0.88rem;color:var(--red);margin-bottom:3px;">{{title}}</div>
+              <div style="font-size:0.8rem;color:var(--muted);line-height:1.55;">{{desc}}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- SECTION 3: METHODS EXPLAINED -->
+<section class="d-section">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up">
+      <div class="s-label mb-3">Section 3 · Techniques</div>
+      <h2 class="s-title mb-2">4 Ways to Drop Duplicates</h2>
+      <p class="s-desc mb-8">The <code style="background:var(--subtle);padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;font-size:0.85em;">keep=</code> parameter is the most important choice — it determines which occurrence survives.</p>
+    </div>
+
+    <!-- keep= visual comparison -->
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:24px;" data-aos="fade-up" data-aos-delay="60">
+      {% for keep,col,badge,desc,example in [
+        ("'first'","var(--teal)","badge-teal","Keep the first occurrence, remove all later ones (default).","Alice ✓ | Alice ✗ | Alice ✗"),
+        ("'last'","var(--sky)","badge-sky","Keep the last occurrence, remove all earlier ones.","Alice ✗ | Alice ✗ | Alice ✓"),
+        ("False","var(--red)","badge-red","Remove ALL occurrences — no copy survives.","Alice ✗ | Alice ✗ | Alice ✗"),
+        ("subset=","var(--violet)","badge-violet","Check only specific columns — other cols can differ.","Same email → duplicate, even if name differs."),
+      ] %}
+      <div style="background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:20px;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <code style="font-family:'DM Mono',monospace;font-weight:700;font-size:0.85rem;color:{{col}};">keep={{keep}}</code>
+        </div>
+        <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;margin-bottom:10px;">{{desc}}</div>
+        <div style="background:var(--subtle);border-radius:8px;padding:8px 12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">{{example}}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Code snippets side by side -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" data-aos="fade-up" data-aos-delay="80">
+      <div style="background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:20px;">
+        <div style="font-family:'Sora',sans-serif;font-weight:700;color:var(--teal);margin-bottom:10px;font-size:0.9rem;">Full Row Duplicates</div>
+        <div class="code-block" style="font-size:0.74rem;">
+<span class="cmt"># Count total duplicates</span>
+df.duplicated().<span class="fn">sum</span>()
+
+<span class="cmt"># Boolean mask of which rows are dups</span>
+df.duplicated()
+
+<span class="cmt"># Keep first, remove rest (default)</span>
+df.drop_duplicates()
+
+<span class="cmt"># Keep last occurrence</span>
+df.drop_duplicates(keep=<span class="str">'last'</span>)
+
+<span class="cmt"># Remove ALL copies of duplicates</span>
+df.drop_duplicates(keep=<span class="kw">False</span>)
+        </div>
+      </div>
+      <div style="background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:20px;">
+        <div style="font-family:'Sora',sans-serif;font-weight:700;color:var(--violet);margin-bottom:10px;font-size:0.9rem;">Subset / Partial Duplicates</div>
+        <div class="code-block" style="font-size:0.74rem;">
+<span class="cmt"># Same email = duplicate (ignore name)</span>
+df.duplicated(
+    subset=[<span class="str">'email'</span>]
+).<span class="fn">sum</span>()
+
+<span class="cmt"># Drop by subset, keep first</span>
+df.drop_duplicates(
+    subset=[<span class="str">'name'</span>, <span class="str">'email'</span>],
+    keep=<span class="str">'first'</span>
+)
+
+<span class="cmt"># Check missing after drop</span>
+print(df.shape)
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- SECTION 4: LIVE CODE COMPILER -->
+<section class="d-section" style="background:#0d1117;">
+  <div class="max-w-5xl mx-auto px-6">
+
+    <div data-aos="fade-up" style="margin-bottom:28px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:4px 14px;border-radius:20px;background:rgba(14,165,233,0.15);color:#7dd3fc;font-size:0.72rem;font-weight:600;font-family:'DM Mono',monospace;letter-spacing:0.08em;margin-bottom:16px;">
+        ⚡ Live Code Compiler
+      </div>
+      <h2 style="font-family:'Sora',sans-serif;font-size:clamp(1.6rem,3vw,2.2rem);font-weight:800;color:#fff;letter-spacing:-0.03em;margin-bottom:10px;">
+        Run It Yourself — <span style="background:linear-gradient(135deg,var(--teal-lt),var(--sky));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">See the Output</span>
+      </h2>
+      <p style="color:#8898aa;font-size:0.92rem;max-width:520px;line-height:1.75;">Real pandas code, real DataFrames, real output. Edit freely — experiment with different <code style="color:var(--teal-lt);">keep=</code> options.</p>
+    </div>
+
+    <!-- Example tabs -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;" data-aos="fade-up" data-aos-delay="40">
+      <button class="ex-tab active" id="ex-0" onclick="loadEx(0)">📋 Detect Duplicates</button>
+      <button class="ex-tab"        id="ex-1" onclick="loadEx(1)">🗑️ Drop (keep first)</button>
+      <button class="ex-tab"        id="ex-2" onclick="loadEx(2)">↩️ Drop (keep last)</button>
+      <button class="ex-tab"        id="ex-3" onclick="loadEx(3)">❌ Drop ALL copies</button>
+      <button class="ex-tab"        id="ex-4" onclick="loadEx(4)">🎯 Subset columns</button>
+      <button class="ex-tab"        id="ex-5" onclick="loadEx(5)">📊 Impact on stats</button>
+    </div>
+
+    <!-- Description bar -->
+    <div id="ex-desc-bar" style="background:#161b22;border:1px solid #30363d;border-radius:10px 10px 0 0;padding:10px 18px;font-size:0.82rem;color:#8898aa;border-bottom:none;"></div>
+
+    <!-- Editor -->
+    <div style="border:1px solid #30363d;border-top:none;background:#0d1117;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #21262d;background:#161b22;">
+        <div style="display:flex;gap:6px;">
+          <div style="width:12px;height:12px;border-radius:50%;background:#ff5f57;"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:#febc2e;"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:#28c840;"></div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#8b949e;">duplicates.py</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="copyCode()" id="copy-btn" style="padding:4px 10px;font-size:0.72rem;border-radius:6px;border:1px solid #30363d;background:transparent;color:#8b949e;cursor:pointer;font-family:'DM Mono',monospace;">copy</button>
+          <button onclick="runCode()" id="run-btn" style="padding:6px 18px;font-size:0.8rem;border-radius:8px;border:none;background:linear-gradient(135deg,var(--teal),var(--sky));color:#fff;cursor:pointer;font-family:'Sora',sans-serif;font-weight:700;display:flex;align-items:center;gap:6px;">
+            <span id="run-icon">▶</span> Run
+          </button>
+        </div>
+      </div>
+      <textarea id="code-editor" spellcheck="false" style="width:100%;min-height:260px;max-height:460px;background:#0d1117;color:#e6edf3;border:none;outline:none;resize:vertical;padding:20px;font-family:'DM Mono',monospace;font-size:0.82rem;line-height:1.75;tab-size:4;"></textarea>
+    </div>
+
+    <!-- Output -->
+    <div style="border:1px solid #30363d;border-top:none;border-radius:0 0 14px 14px;background:#010409;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #21262d;background:#0d1117;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#8b949e;display:flex;align-items:center;gap:6px;">
+          <div style="width:7px;height:7px;border-radius:50%;background:#28c840;" id="status-dot"></div>
+          <span id="status-txt">Ready</span>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#484f58;" id="exec-time"></div>
+      </div>
+      <pre id="code-output" style="margin:0;padding:20px;min-height:110px;max-height:340px;overflow-y:auto;font-family:'DM Mono',monospace;font-size:0.8rem;line-height:1.75;color:#7ee787;white-space:pre-wrap;word-break:break-word;background:#010409;">&#9658; Output will appear here after you click Run...</pre>
+    </div>
+
+    <!-- Tips -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;" data-aos="fade-up">
+      <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px;">
+        <div style="font-size:0.7rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;font-family:'DM Mono',monospace;">Pre-imported</div>
+        <div style="font-size:0.78rem;color:#8b949e;">numpy as <code style="color:var(--teal-lt);">np</code> · pandas as <code style="color:var(--teal-lt);">pd</code></div>
+      </div>
+      <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px;">
+        <div style="font-size:0.7rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;font-family:'DM Mono',monospace;">Shortcut</div>
+        <div style="font-size:0.78rem;color:#8b949e;"><code style="color:var(--teal-lt);">Ctrl+Enter</code> to run · <code style="color:var(--teal-lt);">Tab</code> to indent</div>
+      </div>
+      <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px;">
+        <div style="font-size:0.7rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;font-family:'DM Mono',monospace;">Tip</div>
+        <div style="font-size:0.78rem;color:#8b949e;">Edit any example and run — experiment freely!</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- NAV -->
+<div class="max-w-5xl mx-auto px-6 py-10">
+  <div class="nav-btns">
+    <a href="/missing-values" class="btn-outline">← Missing Values</a>
+    <a href="/" class="btn-outline">🏠 Home</a>
+    <a href="/outliers" class="btn-primary">Next: Outliers →</a>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ══════════════════════════════════════
+   DATASET
+══════════════════════════════════════ */
+const ORDERS = [
+  {name:'Alice',   email:'alice@mail.com',  product:'Laptop',  amount:75000, date:'2024-01-10', order_id:'ORD001'},
+  {name:'Bob',     email:'bob@mail.com',    product:'Phone',   amount:25000, date:'2024-01-11', order_id:'ORD002'},
+  {name:'Alice',   email:'alice@mail.com',  product:'Laptop',  amount:75000, date:'2024-01-10', order_id:'ORD001'},
+  {name:'Carol',   email:'carol@mail.com',  product:'Tablet',  amount:35000, date:'2024-01-12', order_id:'ORD003'},
+  {name:'Bob',     email:'bob@mail.com',    product:'Phone',   amount:25000, date:'2024-01-11', order_id:'ORD002'},
+  {name:'David',   email:'david@mail.com',  product:'Monitor', amount:18000, date:'2024-01-13', order_id:'ORD004'},
+  {name:'Alice',   email:'alice@mail.com',  product:'Laptop',  amount:75000, date:'2024-01-10', order_id:'ORD001'},
+  {name:'Emma',    email:'emma@mail.com',   product:'Keyboard',amount:3500,  date:'2024-01-14', order_id:'ORD005'},
+  {name:'David Jr',email:'david@mail.com',  product:'Mouse',   amount:1200,  date:'2024-01-15', order_id:'ORD006'},
+  {name:'Carol',   email:'carol@mail.com',  product:'Tablet',  amount:35000, date:'2024-01-12', order_id:'ORD003'},
+];
+
+const COLS = ['name','email','product','amount','date','order_id'];
+const COL_LABELS = {name:'Name',email:'Email',product:'Product',amount:'Amount (₹)',date:'Date',order_id:'Order ID'};
+
+let currentMode    = 'full';
+let selectedSubset = new Set(['name','email']);
+let tableRemoved   = false;
+
+/* ── Detect which rows are duplicates ── */
+function detectDuplicates(data, mode, subset) {
+  const seen   = new Map();
+  const dupIdx = [];
+  const firstIdx = [];
+
+  data.forEach((row, i) => {
+    const key = mode === 'full'
+      ? COLS.map(c => row[c]).join('|')
+      : [...subset].map(c => row[c]).join('|');
+
+    if (seen.has(key)) {
+      dupIdx.push(i);
+      if (!firstIdx.includes(seen.get(key))) firstIdx.push(seen.get(key));
+    } else {
+      seen.set(key, i);
+    }
+  });
+  return { dupIdx, firstIdx };
+}
+
+/* ── Render table ── */
+function renderTable(data) {
+  tableRemoved = false;
+  document.getElementById('remove-btn').disabled = false;
+  document.getElementById('remove-btn').textContent = '🗑️ Remove Duplicates';
+
+  const { dupIdx, firstIdx } = detectDuplicates(
+    data, currentMode,
+    currentMode === 'subset' ? selectedSubset : new Set(COLS)
+  );
+
+  const tbody = document.getElementById('dup-tbody');
+  tbody.innerHTML = '';
+
+  data.forEach((row, i) => {
+    const isDup   = dupIdx.includes(i);
+    const isFirst = firstIdx.includes(i);
+    const tr      = document.createElement('tr');
+    tr.id         = `row-${i}`;
+    tr.className  = isDup ? 'is-dup' : (isFirst ? 'is-unique' : '');
+
+    let badge = '';
+    if      (isDup)   badge = `<span class="dup-badge dup">🗑 Duplicate</span>`;
+    else if (isFirst) badge = `<span class="dup-badge first">★ Keep (1st)</span>`;
+    else              badge = `<span class="dup-badge uniq">✓ Unique</span>`;
+
+    tr.innerHTML = `<td style="color:var(--muted);font-size:0.72rem;">${i+1}</td>
+      ${COLS.map(c => {
+        const highlight = currentMode==='subset' && selectedSubset.has(c) && (isDup||isFirst);
+        return `<td style="${highlight?'font-weight:700;color:var(--violet);':''}">${row[c]}</td>`;
+      }).join('')}
+      <td>${badge}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Update counters
+  document.getElementById('cnt-total').textContent = data.length;
+  document.getElementById('cnt-dup').textContent   = dupIdx.length;
+  document.getElementById('cnt-clean').textContent = data.length - dupIdx.length;
+  document.getElementById('table-meta').textContent =
+    `${data.length} rows · ${dupIdx.length} duplicate${dupIdx.length!==1?'s':''} found`;
+}
+
+/* ── Remove with animation ── */
+function removeDuplicates() {
+  if (tableRemoved) return;
+  tableRemoved = true;
+
+  const { dupIdx } = detectDuplicates(
+    ORDERS, currentMode,
+    currentMode === 'subset' ? selectedSubset : new Set(COLS)
+  );
+
+  const btn = document.getElementById('remove-btn');
+  btn.disabled = true;
+  btn.textContent = '✓ Done — ' + dupIdx.length + ' rows removed';
+  btn.style.background = 'linear-gradient(135deg,#15803d,#16a34a)';
+
+  dupIdx.forEach((idx, n) => {
+    setTimeout(() => {
+      const row = document.getElementById(`row-${idx}`);
+      if (row) {
+        row.classList.add('shake-it');
+        setTimeout(() => { row.classList.add('removing'); setTimeout(() => row.remove(), 480); }, 200);
+      }
+    }, n * 160);
+  });
+
+  // Update counters after animation
+  setTimeout(() => {
+    const clean = ORDERS.length - dupIdx.length;
+    document.getElementById('cnt-dup').textContent   = 0;
+    document.getElementById('cnt-clean').textContent = clean;
+    document.getElementById('table-meta').textContent = `${clean} rows · clean ✓`;
+  }, dupIdx.length * 160 + 600);
+}
+
+/* ── Mode switch ── */
+function setMode(m) {
+  currentMode = m;
+  ['full','subset'].forEach(x => document.getElementById('mode-'+x).classList.toggle('active', x===m));
+  document.getElementById('subset-picker').style.display = m==='subset' ? 'block' : 'none';
+  const explain = document.getElementById('mode-explain');
+  if (m === 'full') {
+    explain.innerHTML = '<strong style="color:var(--sky);">🔍 Full Row Match:</strong> All 6 columns must be identical for a row to count as a duplicate. Strictest check — even one different field means the row is kept.';
+  } else {
+    explain.innerHTML = '<strong style="color:var(--violet);">🎯 Subset Match:</strong> Only the selected (highlighted) columns are compared. Two rows can have different values in other columns and still be flagged as duplicates. Try selecting just <strong>email</strong> — David and David Jr. share an email!';
+  }
+  renderTable(ORDERS);
+}
+
+/* ── Column badge picker ── */
+function buildColBadges() {
+  const el = document.getElementById('col-badges');
+  COLS.forEach(c => {
+    const b = document.createElement('div');
+    b.className = 'col-badge' + (selectedSubset.has(c) ? ' selected' : '');
+    b.textContent = COL_LABELS[c];
+    b.onclick = () => {
+      if (selectedSubset.has(c)) { if(selectedSubset.size>1) selectedSubset.delete(c); }
+      else selectedSubset.add(c);
+      b.classList.toggle('selected', selectedSubset.has(c));
+      renderTable(ORDERS);
+    };
+    el.appendChild(b);
+  });
+}
+
+function resetTable() {
+  renderTable(ORDERS);
+  const btn = document.getElementById('remove-btn');
+  btn.disabled = false;
+  btn.textContent = '🗑️ Remove Duplicates';
+  btn.style.background = '';
+}
+
+/* ══════════════════════════════════════
+   CODE COMPILER
+══════════════════════════════════════ */
+const EXAMPLES = [
+  {
+    tab: '📋 Detect Duplicates',
+    desc: '— Find out how many duplicates exist and which rows they are.',
+    code: `# Create a DataFrame with duplicate rows
+df = pd.DataFrame({
+    'name':    ['Alice','Bob','Alice','Carol','Bob','Alice'],
+    'email':   ['a@x.com','b@x.com','a@x.com','c@x.com','b@x.com','a@x.com'],
+    'product': ['Laptop','Phone','Laptop','Tablet','Phone','Laptop'],
+    'amount':  [75000, 25000, 75000, 35000, 25000, 75000]
+})
+
+print("=== Original DataFrame ===")
+print(df.to_string(index=True))
+
+print("=== Which rows are duplicates? ===")
+print(df.duplicated())
+
+print("=== Total duplicate count ===")
+print(f"{df.duplicated().sum()} duplicate rows found")
+print(f"out of {len(df)} total rows ({df.duplicated().mean()*100:.0f}%)")
+
+print("=== Duplicate rows only ===")
+print(df[df.duplicated(keep=False)].to_string())`
+  },
+  {
+    tab: 'Drop (keep first)',
+    desc: '— Keep the first occurrence of each duplicate, remove the rest.',
+    code: `df = pd.DataFrame({
+    'name':    ['Alice','Bob','Alice','Carol','Bob','Alice'],
+    'email':   ['a@x.com','b@x.com','a@x.com','c@x.com','b@x.com','a@x.com'],
+    'amount':  [75000, 25000, 75000, 35000, 25000, 75000]
+})
+
+print("=== BEFORE ===")
+print(f"Rows: {len(df)}")
+print(df.to_string())
+
+# keep='first' is the default — first occurrence survives
+df_clean = df.drop_duplicates(keep='first')
+
+print("=== AFTER drop_duplicates(keep='first') ===")
+print(f"Rows: {len(df_clean)}  ({len(df)-len(df_clean)} rows removed)")
+print(df_clean.to_string())
+
+print("Alice appeared 3x -> kept row 0 (first), dropped rows 2 & 5")
+print("  Bob   appeared 2x ->kept row 1 (first), dropped row 4")`
+  },
+  {
+    tab: 'Drop (keep last)',
+    desc: '— Keep the last occurrence, remove all earlier ones.',
+    code: `df = pd.DataFrame({
+    'name':    ['Alice','Bob','Alice','Carol','Bob','Alice'],
+    'email':   ['a@x.com','b@x.com','a@x.com','c@x.com','b@x.com','a@x.com'],
+    'amount':  [75000, 25000, 75000, 35000, 25000, 75000]
+})
+
+# keep='last' — last occurrence survives
+df_first = df.drop_duplicates(keep='first')
+df_last  = df.drop_duplicates(keep='last')
+
+print("=== keep='first' keeps rows: ===")
+print(df_first.index.tolist())
+
+print("=== keep='last' keeps rows: ===")
+print(df_last.index.tolist())
+
+print("=== When to use keep='last'? ===")
+print("Use when newer records (later rows) are more up-to-date.")
+print("E.g. customer updated their address — keep the latest entry.")
+print()
+print(df_last.to_string())`
+  },
+  {
+    tab: 'Drop ALL copies',
+    desc: '— Remove every occurrence — no duplicate survives at all.',
+    code: `df = pd.DataFrame({
+    'name':    ['Alice','Bob','Alice','Carol','Bob','Alice','Diana'],
+    'email':   ['a@x.com','b@x.com','a@x.com','c@x.com','b@x.com','a@x.com','d@x.com'],
+    'amount':  [75000, 25000, 75000, 35000, 25000, 75000, 12000]
+})
+
+print("=== Original ===", len(df), "rows")
+
+# keep=False removes ALL occurrences of duplicated rows
+df_no_dups = df.drop_duplicates(keep=False)
+
+print("=== After keep=False ===", len(df_no_dups), "rows")
+print(df_no_dups.to_string())
+
+print("Alice (3 copies) -> ALL removed")
+print("  Bob   (2 copies) -> ALL removed")
+print("  Carol (unique)   -> KEPT")
+print("  Diana (unique)   -> KEPT")
+print()
+print("  Use keep=False when ANY duplicate is suspicious and unreliable.")`
+  },
+  {
+    tab: 'Subset columns',
+    desc: '— Flag duplicates based on specific columns only.',
+    code: `df = pd.DataFrame({
+    'name':    ['Alice','Bob','Alice Jr','David','David Jr'],
+    'email':   ['a@x.com','b@x.com','a@x.com','d@x.com','d@x.com'],
+    'product': ['Laptop','Phone','Mouse','Tablet','Monitor'],
+    'amount':  [75000, 25000, 1200, 35000, 18000]
+})
+
+print("=== Original DataFrame ===")
+print(df.to_string())
+
+print("=== Full row check (nothing flagged) ===")
+print(f"Duplicates: {df.duplicated().sum()}")
+print("(Names/products differ so no full-row match)")
+
+print("=== Subset=['email'] check ===")
+dup_email = df.duplicated(subset=['email'])
+print(f"Duplicates by email: {dup_email.sum()}")
+print(df[dup_email])
+
+print("=== Drop by email subset ===")
+df_clean = df.drop_duplicates(subset=['email'], keep='first')
+print(df_clean.to_string())
+print(f"Removed {len(df)-len(df_clean)} rows (same email = same person)")`
+  },
+  {
+    tab: 'Impact on stats',
+    desc: '— See how duplicates distort your statistics and ML data.',
+    code: `# Show how duplicates corrupt analysis
+df_dirty = pd.DataFrame({
+    'customer': ['Alice','Bob','Carol','Alice','Bob','Alice'],
+    'revenue':  [5000, 3000, 7000, 5000, 3000, 5000],
+    'region':   ['North','South','East','North','South','North']
+})
+
+df_clean = df_dirty.drop_duplicates()
+
+print("=== Revenue Stats: DIRTY vs CLEAN ===")
+print(f"{'Metric':<20} {'Dirty':>10} {'Clean':>10}")
+print("-" * 42)
+print(f"{'Total rows':<20} {len(df_dirty):>10} {len(df_clean):>10}")
+print(f"{'Total revenue':<20} {df_dirty['revenue'].sum():>10} {df_clean['revenue'].sum():>10}")
+print(f"{'Mean revenue':<20} {df_dirty['revenue'].mean():>10.1f} {df_clean['revenue'].mean():>10.1f}")
+print(f"{'Customer count':<20} {df_dirty['customer'].nunique():>10} {df_clean['customer'].nunique():>10}")
+
+print("=== Revenue by region: DIRTY ===")
+print(df_dirty.groupby('region')['revenue'].sum())
+
+print("=== Revenue by region: CLEAN ===")
+print(df_clean.groupby('region')['revenue'].sum())
+
+print("North region: dirty=15000 vs clean=5000 (3x inflated!)")`
+  },
+];
+
+let currentEx = 0;
+
+function loadEx(i) {
+  currentEx = i;
+  const ex  = EXAMPLES[i];
+  document.querySelectorAll('.ex-tab').forEach((t, ti) => t.classList.toggle('active', ti===i));
+  document.getElementById('code-editor').value    = ex.code;
+  document.getElementById('ex-desc-bar').innerHTML =
+    `<span style="color:#7dd3fc;font-weight:600;">${ex.tab}</span><span style="color:#8b949e;"> ${ex.desc}</span>`;
+  clearOutput();
+  autoHeight();
+}
+
+async function runCode() {
+  const btn  = document.getElementById('run-btn');
+  const icon = document.getElementById('run-icon');
+  const out  = document.getElementById('code-output');
+  const dot  = document.getElementById('status-dot');
+  const stat = document.getElementById('status-txt');
+  const time = document.getElementById('exec-time');
+  const code = document.getElementById('code-editor').value;
+
+  btn.disabled = true;
+  icon.textContent = '⟳';
+  icon.classList.add('running-icon');
+  dot.style.background  = '#F59E0B';
+  stat.textContent      = 'Running…';
+  out.style.color       = '#8b949e';
+  out.textContent       = '⟳  Executing…';
+  time.textContent      = '';
+
+  const t0 = Date.now();
+  try {
+    const r = await fetch('/api/run-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error(`Server error ${r.status}: ${txt.substring(0,120)}`);
+    }
+    const d  = await r.json();
+    const ms = Date.now() - t0;
+    time.textContent = `${ms}ms`;
+
+    if (d.error && d.error.trim()) {
+      out.style.color      = '#ff7b72';
+      dot.style.background = '#F43F5E';
+      stat.textContent     = 'Error';
+      out.textContent      = '✗  ' + d.error.trim() + (d.output?.trim() ? '\n\n' + d.output.trim() : '');
+    } else {
+      out.style.color      = '#7ee787';
+      dot.style.background = '#28c840';
+      stat.textContent     = 'Done ✓';
+      out.textContent      = d.output?.trim() || '(no output)';
+    }
+  } catch (err) {
+    out.style.color      = '#ff7b72';
+    dot.style.background = '#F43F5E';
+    stat.textContent     = 'Error';
+    out.textContent      = '✗  ' + err.message;
+  } finally {
+    btn.disabled = false;
+    icon.textContent = '▶';
+    icon.classList.remove('running-icon');
+  }
+}
+
+function clearOutput() {
+  const out = document.getElementById('code-output');
+  out.style.color  = '#8b949e';
+  out.textContent  = '\u25b8 Output will appear here after you click Run...';
+  document.getElementById('status-dot').style.background = '#28c840';
+  document.getElementById('status-txt').textContent      = 'Ready';
+  document.getElementById('exec-time').textContent       = '';
+}
+
+async function copyCode() {
+  try {
+    await navigator.clipboard.writeText(document.getElementById('code-editor').value);
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'copied!'; btn.style.color = '#7ee787';
+    setTimeout(() => { btn.textContent = 'copy'; btn.style.color = ''; }, 1800);
+  } catch(e) {}
+}
+
+function autoHeight() {
+  const ta = document.getElementById('code-editor');
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 460) + 'px';
+}
+
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  buildColBadges();
+  renderTable(ORDERS);
+
+  loadEx(0);
+
+  const editor = document.getElementById('code-editor');
+  editor.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const s = editor.selectionStart, en = editor.selectionEnd;
+      editor.value = editor.value.substring(0,s) + '    ' + editor.value.substring(en);
+      editor.selectionStart = editor.selectionEnd = s + 4;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault(); runCode();
+    }
+  });
+  editor.addEventListener('input', autoHeight);
+});
+</script>
+{% endblock %}

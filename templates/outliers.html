@@ -1,0 +1,966 @@
+{% extends "base.html" %}
+{% block title %}Outliers — DataClean Academy{% endblock %}
+
+{% block extra_head %}
+<style>
+:root{--teal:#0D9488;--teal-lt:#14B8A6;--sky:#0EA5E9;--violet:#7C3AED;--pink:#EC4899;--red:#F43F5E;--ink:#0F172A;--muted:#64748B;--subtle:#F8FAFC;--border:#E2E8F0;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{0%{transform:scale(0.5);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+@keyframes blink-red{0%,100%{box-shadow:0 0 0 0 rgba(244,63,94,0.4)}50%{box-shadow:0 0 0 8px rgba(244,63,94,0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.o-hero{padding:72px 0 56px;background:#fff;position:relative;overflow:hidden;border-bottom:1.5px solid var(--border);}
+.o-orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;}
+.o-section{padding:60px 0;border-bottom:1.5px solid var(--border);}
+.o-section:last-child{border-bottom:none;}
+
+/* Dot plot */
+.dot-canvas-wrap{background:var(--subtle);border:1.5px solid var(--border);border-radius:16px;padding:20px;position:relative;}
+
+/* Strategy cards */
+.strat-card{background:#fff;border:2px solid var(--border);border-radius:16px;padding:20px;cursor:pointer;transition:all 0.22s;}
+.strat-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,0.08);}
+.strat-card.active{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,148,136,0.12);}
+
+/* Method toggle */
+.m-toggle{display:flex;gap:0;border:1.5px solid var(--border);border-radius:12px;overflow:hidden;background:var(--subtle);}
+.m-toggle button{flex:1;padding:10px 20px;border:none;background:transparent;font-family:'Sora',sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer;transition:all 0.2s;color:var(--muted);}
+.m-toggle button.active{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+
+/* Outlier pill */
+.o-pill{display:inline-flex;align-items:center;justify-content:center;min-width:52px;padding:6px 12px;border-radius:10px;font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:700;border:2px solid var(--border);background:#fff;transition:all 0.3s;}
+.o-pill.outlier{background:rgba(244,63,94,0.08);border-color:rgba(244,63,94,0.4);color:var(--red);animation:blink-red 2s infinite;}
+.o-pill.normal{background:rgba(13,148,136,0.06);border-color:rgba(13,148,136,0.3);color:var(--teal);}
+
+/* Compiler */
+.ex-tab{padding:7px 14px;border-radius:8px;border:1px solid #30363d;background:#161b22;color:#8b949e;font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.ex-tab:hover{border-color:#8b949e;color:#e6edf3;}
+.ex-tab.active{border-color:var(--red);background:rgba(244,63,94,0.12);color:#fca5a5;}
+.running-icon{animation:spin 0.7s linear infinite;}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="o-hero">
+  <div class="o-orb" style="width:500px;height:500px;top:-200px;right:-100px;background:radial-gradient(circle,rgba(244,63,94,0.1),transparent 70%);"></div>
+  <div class="o-orb" style="width:350px;height:350px;bottom:-120px;left:-80px;background:radial-gradient(circle,rgba(124,58,237,0.08),transparent 70%);"></div>
+  <div class="max-w-5xl mx-auto px-6" style="position:relative;z-index:1;" data-aos="fade-up">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <span class="s-label">Module 3 of 6</span>
+      <span class="badge badge-red">📊 Outliers</span>
+      <span style="font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace;">~12 min · Interactive</span>
+    </div>
+    <h1 style="font-family:'Sora',sans-serif;font-size:clamp(2.2rem,4.5vw,3.2rem);font-weight:800;letter-spacing:-0.04em;line-height:1.12;color:var(--ink);margin-bottom:16px;">
+      Outliers —<br/>
+      <span style="background:linear-gradient(135deg,var(--red),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Detect, Decide, Handle</span>
+    </h1>
+    <p style="font-size:1rem;color:var(--muted);max-width:580px;line-height:1.8;margin-bottom:28px;">A single extreme value can collapse a regression line, skew your entire distribution, or hide a genuine fraud pattern. Learn to find them — and make the right call.</p>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:32px;">
+      {% for s,l,c in [('2','Detection methods','var(--red)'),('4','Handling strategies','var(--violet)'),('IQR','Interquartile Range','var(--sky)'),('Z','Z-Score method','var(--teal)')] %}
+      <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,0.04);">
+        <div style="font-family:'Sora',sans-serif;font-size:1.5rem;font-weight:800;color:{{c}};">{{s}}</div>
+        <div style="font-size:0.75rem;color:var(--muted);max-width:80px;line-height:1.4;">{{l}}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      {% for i in range(1,7) %}<div style="flex:1;max-width:72px;"><div style="height:5px;border-radius:9999px;background:{% if i<=3 %}linear-gradient(90deg,var(--teal),var(--sky)){% else %}var(--border){% endif %};"></div></div>{% endfor %}
+      <span style="font-size:0.7rem;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap;margin-left:4px;">3 / 6</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- SECTION 1: INTERACTIVE DETECTOR -->
+<section class="o-section">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up">
+      <div class="s-label mb-3">Section 1 · See it live</div>
+      <h2 class="s-title mb-2">Outlier Detector Playground 🎮</h2>
+      <p class="s-desc mb-6">Enter your own numbers or use the preset salary data. Toggle between IQR and Z-Score to compare how they flag different points.</p>
+    </div>
+
+    <!-- Method toggle + input -->
+    <div style="background:#fff;border:1.5px solid var(--border);border-radius:20px;padding:24px;box-shadow:0 4px 24px rgba(0,0,0,0.05);margin-bottom:20px;" data-aos="fade-up" data-aos-delay="60">
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+        <div class="m-toggle">
+          <button class="active" id="btn-iqr"    onclick="setDetMethod('iqr')">📦 IQR Method</button>
+          <button                id="btn-zscore"  onclick="setDetMethod('zscore')">📐 Z-Score</button>
+        </div>
+        <button onclick="loadPreset('salary')"  style="padding:7px 14px;font-size:0.78rem;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);transition:all 0.2s;" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">💼 Salary data</button>
+        <button onclick="loadPreset('age')"     style="padding:7px 14px;font-size:0.78rem;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);transition:all 0.2s;" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">👤 Age data</button>
+        <button onclick="loadPreset('fraud')"   style="padding:7px 14px;font-size:0.78rem;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);transition:all 0.2s;" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--border)'">🚨 Fraud amounts</button>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+        <input class="field" id="o-input" style="flex:1;min-width:200px;" placeholder="Enter numbers separated by commas…"/>
+        <button onclick="detectOutliers()" class="btn-primary" style="padding:10px 22px;font-size:0.88rem;">Detect ▶</button>
+      </div>
+
+      <!-- Results pills -->
+      <div id="o-pills" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;min-height:40px;"></div>
+
+      <!-- Stats row -->
+      <div id="o-stats" style="display:none;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+        <div style="flex:1;min-width:100px;background:var(--subtle);border:1.5px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+          <div style="font-family:'Sora',sans-serif;font-size:1.2rem;font-weight:800;color:var(--red);" id="o-cnt-out">—</div>
+          <div style="font-size:0.7rem;color:var(--muted);">Outliers</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:var(--subtle);border:1.5px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+          <div style="font-family:'Sora',sans-serif;font-size:1.2rem;font-weight:800;color:var(--teal);" id="o-cnt-clean">—</div>
+          <div style="font-size:0.7rem;color:var(--muted);">Clean values</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:var(--subtle);border:1.5px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+          <div style="font-family:'Sora',sans-serif;font-size:1.2rem;font-weight:800;color:var(--muted);" id="o-lower">—</div>
+          <div style="font-size:0.7rem;color:var(--muted);">Lower bound</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:var(--subtle);border:1.5px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+          <div style="font-family:'Sora',sans-serif;font-size:1.2rem;font-weight:800;color:var(--muted);" id="o-upper">—</div>
+          <div style="font-size:0.7rem;color:var(--muted);">Upper bound</div>
+        </div>
+      </div>
+
+      <!-- Visualization canvas -->
+      <div class="dot-canvas-wrap" id="viz-wrap">
+        <div style="font-size:0.75rem;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:10px;" id="canvas-label">
+          📦 Box Plot — whiskers show IQR bounds · 🔴 outliers · 🟢 normal data
+        </div>
+        <canvas id="o-canvas" height="180" style="width:100%;display:block;"></canvas>
+      </div>
+    </div>
+
+    <!-- Method explanation cards -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" data-aos="fade-up" data-aos-delay="80">
+      <div style="background:#fff;border:1.5px solid rgba(244,63,94,0.3);border-radius:16px;padding:22px;" id="explain-iqr">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(244,63,94,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;">📦</div>
+          <div>
+            <div style="font-family:'Sora',sans-serif;font-weight:700;color:var(--red);font-size:0.95rem;">IQR Method</div>
+            <span class="badge badge-red" style="font-size:0.65rem;">Robust · No normality needed</span>
+          </div>
+        </div>
+        <div style="background:var(--subtle);border-radius:8px;padding:10px 14px;font-family:'DM Mono',monospace;font-size:0.78rem;margin-bottom:10px;line-height:1.8;">
+          Q1 = 25th percentile<br/>
+          Q3 = 75th percentile<br/>
+          IQR = Q3 − Q1<br/>
+          Lower = Q1 − <strong>1.5</strong> × IQR<br/>
+          Upper = Q3 + <strong>1.5</strong> × IQR
+        </div>
+        <p style="font-size:0.8rem;color:var(--muted);line-height:1.65;">Best for skewed data or unknown distributions. Extreme values don't affect the bounds themselves.</p>
+      </div>
+      <div style="background:#fff;border:1.5px solid rgba(124,58,237,0.3);border-radius:16px;padding:22px;" id="explain-zscore">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;">📐</div>
+          <div>
+            <div style="font-family:'Sora',sans-serif;font-weight:700;color:var(--violet);font-size:0.95rem;">Z-Score Method</div>
+            <span class="badge badge-violet" style="font-size:0.65rem;">Assumes normal distribution</span>
+          </div>
+        </div>
+        <div style="background:var(--subtle);border-radius:8px;padding:10px 14px;font-family:'DM Mono',monospace;font-size:0.78rem;margin-bottom:10px;line-height:1.8;">
+          z = (x − mean) / std<br/>
+          Outlier if |z| &gt; <strong>3</strong><br/><br/>
+          Lower = mean − 3 × std<br/>
+          Upper = mean + 3 × std
+        </div>
+        <p style="font-size:0.8rem;color:var(--muted);line-height:1.65;">Best for normally distributed data. Sensitive to the outliers it's trying to detect — less robust than IQR.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- SECTION 2: HANDLING STRATEGIES -->
+<section class="o-section" style="background:var(--subtle);">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up">
+      <div class="s-label mb-3">Section 2 · What to do</div>
+      <h2 class="s-title mb-2">4 Handling Strategies</h2>
+      <p class="s-desc mb-8">Detection is only half the job. Click each strategy to understand when to use it.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;" data-aos="fade-up" data-aos-delay="60">
+      {% for icon,title,col,when,code,warn in [
+        ('🗑️','Remove','var(--red)',
+         'The outlier is clearly a data entry error or sensor glitch. Removing it is safe.',
+         "df = df[(df['salary'] >= lower) & (df['salary'] <= upper)]",
+         'Losing real data points. Only remove if truly erroneous.'),
+        ('✂️','Cap (Winsorize)','#B45309',
+         'You want to limit extreme influence but keep row count. E.g. salary capped at 95th percentile.',
+         "df['salary'] = df['salary'].clip(lower=lower, upper=upper)",
+         'Values become artificial — document this clearly.'),
+        ('📐','Transform','var(--sky)',
+         'Apply log or sqrt to compress the scale. Reduces outlier influence without removing rows.',
+         "df['salary_log'] = np.log1p(df['salary'])",
+         'Changes the scale — remember to back-transform for reporting.'),
+        ('🏷️','Flag & Keep','var(--teal)',
+         'Outliers are genuine rare events (fraud, medical anomalies). Flag them for separate analysis.',
+         "df['is_outlier'] = (df['salary'] < lower) | (df['salary'] > upper)",
+         'Requires follow-up analysis — don\'t just ignore the flag.'),
+      ] %}
+      <div class="strat-card" onclick="expandStrat(this, '{{title}}', '{{col}}', '{{when}}', '{{code}}', '{{warn}}')">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="font-size:1.6rem;">{{icon}}</div>
+          <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:1rem;color:{{col}};">{{title}}</div>
+        </div>
+        <p style="font-size:0.82rem;color:var(--muted);line-height:1.6;">{{when}}</p>
+        <div style="margin-top:10px;font-size:0.72rem;color:{{col}};font-family:'DM Mono',monospace;background:rgba(0,0,0,0.03);padding:6px 10px;border-radius:6px;">{{code}}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Strategy detail panel -->
+    <div id="strat-detail" style="display:none;margin-top:16px;background:#fff;border:2px solid var(--teal);border-radius:16px;padding:22px;animation:fadeUp 0.3s ease;">
+      <div style="font-family:'Sora',sans-serif;font-weight:700;margin-bottom:8px;" id="sd-title"></div>
+      <div style="font-size:0.85rem;color:var(--muted);line-height:1.7;margin-bottom:12px;" id="sd-when"></div>
+      <div class="code-block" style="font-size:0.78rem;margin-bottom:10px;" id="sd-code"></div>
+      <div style="font-size:0.8rem;padding:10px 14px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.3);color:#92400e;" id="sd-warn"></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- SECTION 3: LIVE COMPILER -->
+<section class="o-section" style="background:#0d1117;">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up" style="margin-bottom:28px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:4px 14px;border-radius:20px;background:rgba(244,63,94,0.15);color:#fca5a5;font-size:0.72rem;font-weight:600;font-family:'DM Mono',monospace;letter-spacing:0.08em;margin-bottom:16px;">⚡ Live Code Compiler</div>
+      <h2 style="font-family:'Sora',sans-serif;font-size:clamp(1.6rem,3vw,2.2rem);font-weight:800;color:#fff;letter-spacing:-0.03em;margin-bottom:10px;">
+        Run the Code — <span style="background:linear-gradient(135deg,#fca5a5,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">See the Outliers</span>
+      </h2>
+      <p style="color:#8898aa;font-size:0.92rem;max-width:520px;line-height:1.75;">Real salary DataFrame with planted outliers. Edit freely — try changing the threshold or method.</p>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;" data-aos="fade-up" data-aos-delay="40">
+      <button class="ex-tab active" id="ex-0" onclick="loadEx(0)">📊 Detect with IQR</button>
+      <button class="ex-tab"        id="ex-1" onclick="loadEx(1)">📐 Detect with Z-Score</button>
+      <button class="ex-tab"        id="ex-2" onclick="loadEx(2)">🗑️ Remove Outliers</button>
+      <button class="ex-tab"        id="ex-3" onclick="loadEx(3)">✂️ Cap (Winsorize)</button>
+      <button class="ex-tab"        id="ex-4" onclick="loadEx(4)">📐 Log Transform</button>
+      <button class="ex-tab"        id="ex-5" onclick="loadEx(5)">🏷️ Flag & Keep</button>
+      <button class="ex-tab"        id="ex-6" onclick="loadEx(6)">📊 IQR vs Z-Score</button>
+    </div>
+
+    <div id="ex-desc-bar" style="background:#161b22;border:1px solid #30363d;border-radius:10px 10px 0 0;padding:10px 18px;font-size:0.82rem;color:#8898aa;border-bottom:none;"></div>
+
+    <div style="border:1px solid #30363d;border-top:none;background:#0d1117;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #21262d;background:#161b22;">
+        <div style="display:flex;gap:6px;">
+          <div style="width:12px;height:12px;border-radius:50%;background:#ff5f57;"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:#febc2e;"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:#28c840;"></div>
+        </div>
+        <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#8b949e;">outliers.py</span>
+        <div style="display:flex;gap:8px;">
+          <button onclick="copyCode()" id="copy-btn" style="padding:4px 10px;font-size:0.72rem;border-radius:6px;border:1px solid #30363d;background:transparent;color:#8b949e;cursor:pointer;font-family:'DM Mono',monospace;">copy</button>
+          <button onclick="runCode()" id="run-btn" style="padding:6px 18px;font-size:0.8rem;border-radius:8px;border:none;background:linear-gradient(135deg,var(--red),var(--pink));color:#fff;cursor:pointer;font-family:'Sora',sans-serif;font-weight:700;display:flex;align-items:center;gap:6px;">
+            <span id="run-icon">▶</span> Run
+          </button>
+        </div>
+      </div>
+      <textarea id="code-editor" spellcheck="false" style="width:100%;min-height:260px;max-height:460px;background:#0d1117;color:#e6edf3;border:none;outline:none;resize:vertical;padding:20px;font-family:'DM Mono',monospace;font-size:0.82rem;line-height:1.75;tab-size:4;"></textarea>
+    </div>
+
+    <div style="border:1px solid #30363d;border-top:none;border-radius:0 0 14px 14px;background:#010409;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #21262d;background:#0d1117;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#8b949e;display:flex;align-items:center;gap:6px;">
+          <div style="width:7px;height:7px;border-radius:50%;background:#28c840;" id="status-dot"></div>
+          <span id="status-txt">Ready</span>
+        </div>
+        <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:#484f58;" id="exec-time"></span>
+      </div>
+      <pre id="code-output" style="margin:0;padding:20px;min-height:110px;max-height:340px;overflow-y:auto;font-family:'DM Mono',monospace;font-size:0.8rem;line-height:1.75;color:#7ee787;white-space:pre-wrap;word-break:break-word;background:#010409;">&#9658; Output will appear here after you click Run...</pre>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;">
+      <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px;">
+        <div style="font-size:0.7rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;font-family:'DM Mono',monospace;">Pre-imported</div>
+        <div style="font-size:0.78rem;color:#8b949e;">numpy · pandas · scipy.stats</div>
+      </div>
+      <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px;">
+        <div style="font-size:0.7rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;font-family:'DM Mono',monospace;">Shortcut</div>
+        <div style="font-size:0.78rem;color:#8b949e;"><code style="color:#fca5a5;">Ctrl+Enter</code> to run · <code style="color:#fca5a5;">Tab</code> to indent</div>
+      </div>
+      <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px;">
+        <div style="font-size:0.7rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;font-family:'DM Mono',monospace;">Try it</div>
+        <div style="font-size:0.78rem;color:#8b949e;">Change the threshold from 3 to 2 — more outliers!</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NAV -->
+<div class="max-w-5xl mx-auto px-6 py-10">
+  <div class="nav-btns">
+    <a href="/duplicates" class="btn-outline">← Duplicates</a>
+    <a href="/" class="btn-outline">🏠 Home</a>
+    <a href="/skewness" class="btn-primary">Next: Skewness →</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ══ DATASET PRESETS ══ */
+const PRESETS = {
+  salary: '28000, 32000, 35000, 31000, 29000, 34000, 250000, 33000, 30000, 28500, 36000, -5000, 31500',
+  age:    '22, 25, 28, 24, 26, 23, 120, 27, 25, 24, 28, 26, -3, 25, 29',
+  fraud:  '1200, 1350, 980, 1100, 1420, 85000, 1250, 1180, 99000, 1300, 1050, 1400, 200',
+};
+
+let detMethod = 'iqr';
+
+function setDetMethod(m) {
+  detMethod = m;
+  document.getElementById('btn-iqr').classList.toggle('active', m==='iqr');
+  document.getElementById('btn-zscore').classList.toggle('active', m==='zscore');
+  if (document.getElementById('o-input').value.trim()) detectOutliers();
+  else {
+    // Reset label
+    document.getElementById('canvas-label').innerHTML = m==='iqr'
+      ? '📦 Box Plot — box = Q1→Q3 · line = median · whiskers = IQR bounds · <span style="color:#F43F5E;font-weight:700;">● outliers</span> · <span style="color:#0D9488;font-weight:700;">● normal</span>'
+      : '📐 Normal Distribution — <span style="color:#7C3AED;font-weight:700;">■ outlier zones</span> (|z| > 3) · <span style="color:#F43F5E;font-weight:700;">● outliers</span> · <span style="color:#0D9488;font-weight:700;">● normal</span>';
+  }
+}
+
+function loadPreset(key) {
+  document.getElementById('o-input').value = PRESETS[key];
+  detectOutliers();
+}
+
+function detectOutliers() {
+  const raw = document.getElementById('o-input').value
+    .split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+  if (raw.length < 3) return;
+
+  const sorted = [...raw].sort((a,b) => a-b);
+  let lower, upper, extraStats = {};
+
+  if (detMethod === 'iqr') {
+    const q1  = percentile(sorted, 25);
+    const q3  = percentile(sorted, 75);
+    const med = percentile(sorted, 50);
+    const iqr = q3 - q1;
+    lower = q1 - 1.5*iqr; upper = q3 + 1.5*iqr;
+    extraStats = { q1, q3, med, iqr };
+  } else {
+    const mean = raw.reduce((a,b)=>a+b,0)/raw.length;
+    const std  = Math.sqrt(raw.reduce((a,b)=>a+(b-mean)**2,0)/raw.length);
+    lower = mean - 3*std; upper = mean + 3*std;
+    extraStats = { mean, std };
+  }
+
+  const pills = document.getElementById('o-pills');
+  pills.innerHTML = '';
+  let outCount = 0;
+  raw.forEach(v => {
+    const isOut = v < lower || v > upper;
+    if (isOut) outCount++;
+    const p = document.createElement('span');
+    p.className = 'o-pill ' + (isOut ? 'outlier' : 'normal');
+    p.textContent = v.toLocaleString();
+    p.title = isOut ? `Outlier! (outside [${lower.toFixed(1)}, ${upper.toFixed(1)}])` : 'Normal';
+    pills.appendChild(p);
+  });
+
+  const statsEl = document.getElementById('o-stats');
+  statsEl.style.display = 'flex';
+  document.getElementById('o-cnt-out').textContent   = outCount;
+  document.getElementById('o-cnt-clean').textContent = raw.length - outCount;
+  document.getElementById('o-lower').textContent     = lower.toFixed(1);
+  document.getElementById('o-upper').textContent     = upper.toFixed(1);
+
+  if (detMethod === 'iqr') {
+    document.getElementById('canvas-label').innerHTML = '📦 Box Plot — box = Q1→Q3 · line = median · whiskers = IQR bounds · <span style="color:#F43F5E;font-weight:700;">● outliers</span> · <span style="color:#0D9488;font-weight:700;">● normal</span>';
+    drawBoxPlot(raw, sorted, lower, upper, extraStats);
+  } else {
+    document.getElementById('canvas-label').innerHTML = '📐 Normal Distribution — <span style="color:#7C3AED;font-weight:700;">■ outlier zones</span> (|z| > 3) · <span style="color:#F43F5E;font-weight:700;">● outliers</span> · <span style="color:#0D9488;font-weight:700;">● normal</span>';
+    drawNormalDist(raw, lower, upper, extraStats);
+  }
+}
+
+function percentile(sorted, p) {
+  const idx = (p/100) * (sorted.length - 1);
+  const lo = Math.floor(idx), hi = Math.ceil(idx);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+function drawBoxPlot(raw, sorted, lower, upper, stats) {
+  const canvas = document.getElementById('o-canvas');
+  canvas.height = 240;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = canvas.offsetWidth * dpr;
+  canvas.height = 240 * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = 240;
+  ctx.clearRect(0, 0, W, H);
+
+  const PAD_L = 60, PAD_R = 20, PAD_T = 28, PAD_B = 52;
+  const plotW = W - PAD_L - PAD_R;
+  const axisY  = H - PAD_B;
+  const boxTop = axisY - 118, boxH = 80, boxMid = boxTop + boxH / 2;
+
+  // Split-axis: normal zone gets 68% of plotW, outlier zones share the rest.
+  // This guarantees the IQR box is always wide — even for extreme skew (fraud data).
+  const lWhisker = Math.max(lower, Math.min(...raw));
+  const rWhisker = Math.min(upper, Math.max(...raw));
+  const hasLeftOut  = raw.some(v => v < lower);
+  const hasRightOut = raw.some(v => v > upper);
+  const leftOutFrac  = hasLeftOut  ? 0.15 : 0;
+  const rightOutFrac = hasRightOut ? 0.15 : 0;
+  const normalFrac   = 1 - leftOutFrac - rightOutFrac;
+  const normalLeft   = PAD_L + leftOutFrac * plotW;
+  const normalRight  = PAD_L + (leftOutFrac + normalFrac) * plotW;
+  const normalW      = normalRight - normalLeft;
+
+  function toX(v) {
+    if (v <= lWhisker) {
+      const lo = Math.min(...raw), hi = lWhisker;
+      if (hi === lo) return normalLeft;
+      return PAD_L + ((v - lo) / (hi - lo)) * (normalLeft - PAD_L);
+    } else if (v >= rWhisker) {
+      const lo = rWhisker, hi = Math.max(...raw);
+      if (hi === lo) return normalRight;
+      return normalRight + ((v - lo) / (hi - lo)) * (W - PAD_R - normalRight);
+    } else {
+      const lo = lWhisker, hi = rWhisker;
+      if (hi === lo) return (normalLeft + normalRight) / 2;
+      return normalLeft + ((v - lo) / (hi - lo)) * normalW;
+    }
+  }
+
+  // Background
+  ctx.fillStyle = '#F8FAFC';
+  ctx.fillRect(0, 0, W, H);
+
+  // Outlier zone tinting
+  if (hasLeftOut)  { ctx.fillStyle = 'rgba(244,63,94,0.07)';  ctx.fillRect(PAD_L, PAD_T, normalLeft - PAD_L, axisY - PAD_T); }
+  if (hasRightOut) { ctx.fillStyle = 'rgba(244,63,94,0.07)';  ctx.fillRect(normalRight, PAD_T, W - PAD_R - normalRight, axisY - PAD_T); }
+  ctx.fillStyle = 'rgba(13,148,136,0.08)';
+  ctx.fillRect(toX(stats.q1), PAD_T, toX(stats.q3) - toX(stats.q1), axisY - PAD_T);
+
+  // Axis
+  ctx.strokeStyle = '#CBD5E1'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(PAD_L, axisY); ctx.lineTo(W - PAD_R, axisY); ctx.stroke();
+
+  // Axis-break zigzags at zone boundaries
+  function drawBreak(x) {
+    const bh = 10, bw = 7;
+    // white knockout
+    ctx.strokeStyle = '#F8FAFC'; ctx.lineWidth = 4; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(x, axisY - bh - 2); ctx.lineTo(x, axisY + 4); ctx.stroke();
+    // zigzag
+    ctx.strokeStyle = '#94A3B8'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - bw/2, axisY - bh);
+    ctx.lineTo(x + bw/2, axisY - bh/2);
+    ctx.lineTo(x - bw/2, axisY);
+    ctx.lineTo(x + bw/2, axisY + 3);
+    ctx.stroke();
+  }
+  if (hasLeftOut)  drawBreak(normalLeft  - 1);
+  if (hasRightOut) drawBreak(normalRight + 1);
+
+  // Key value tick labels (no crowding)
+  const keyVals = [];
+  if (hasLeftOut) keyVals.push(Math.min(...raw));
+  keyVals.push(lWhisker, stats.q1, stats.med, stats.q3, rWhisker);
+  if (hasRightOut) keyVals.push(Math.max(...raw));
+  const seen = new Set();
+  ctx.font = `10px 'DM Mono', monospace`; ctx.textAlign = 'center';
+  keyVals.forEach(v => {
+    const x = toX(v);
+    const lbl = Math.abs(v) >= 10000 ? (v/1000).toFixed(0)+'k' : v.toFixed(0);
+    if (seen.has(lbl)) return; seen.add(lbl);
+    ctx.strokeStyle = '#E2E8F0'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(x, PAD_T); ctx.lineTo(x, axisY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = '#CBD5E1'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, axisY); ctx.lineTo(x, axisY+5); ctx.stroke();
+    ctx.fillStyle = '#64748B'; ctx.fillText(lbl, x, axisY + 17);
+  });
+
+  // Whiskers
+  ctx.strokeStyle = '#0F172A'; ctx.lineWidth = 3; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(toX(stats.q1), boxMid); ctx.lineTo(toX(lWhisker), boxMid); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(toX(stats.q3), boxMid); ctx.lineTo(toX(rWhisker), boxMid); ctx.stroke();
+  [lWhisker, rWhisker].forEach(v => {
+    const x = toX(v);
+    ctx.beginPath(); ctx.moveTo(x, boxTop + 12); ctx.lineTo(x, boxTop + boxH - 12); ctx.stroke();
+  });
+
+  // IQR Box with gradient
+  const boxX = toX(stats.q1), boxW2 = toX(stats.q3) - toX(stats.q1);
+  const grad = ctx.createLinearGradient(boxX, boxTop, boxX, boxTop + boxH);
+  grad.addColorStop(0, '#38BDF8'); grad.addColorStop(1, '#0369A1');
+  ctx.fillStyle = grad; ctx.strokeStyle = '#0F172A'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(boxX, boxTop, boxW2, boxH, 8); ctx.fill(); ctx.stroke();
+
+  // Median line
+  const medX = toX(stats.med);
+  ctx.strokeStyle = '#FACC15'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(medX, boxTop + 5); ctx.lineTo(medX, boxTop + boxH - 5); ctx.stroke();
+
+  // Box labels
+  ctx.font = `bold 10px 'DM Mono', monospace`; ctx.textAlign = 'center';
+  ctx.fillStyle = '#e0f2fe'; ctx.fillText('Q1',     toX(stats.q1), boxTop - 7);
+  ctx.fillStyle = '#e0f2fe'; ctx.fillText('Q3',     toX(stats.q3), boxTop - 7);
+  ctx.fillStyle = '#CA8A04'; ctx.fillText('Median', medX,          boxTop - 7);
+
+  // Fence dashed lines
+  const lx = toX(lower), ux = toX(upper);
+  ctx.strokeStyle = '#F43F5E'; ctx.lineWidth = 1.5; ctx.setLineDash([5,3]);
+  ctx.beginPath(); ctx.moveTo(lx, PAD_T + 14); ctx.lineTo(lx, axisY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ux, PAD_T + 14); ctx.lineTo(ux, axisY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#F43F5E'; ctx.font = `bold 9px 'DM Mono', monospace`; ctx.textAlign = 'center';
+  ctx.fillText('Lower fence', lx, PAD_T + 11);
+  ctx.fillText('Upper fence', ux, PAD_T + 11);
+
+  // Data points above box (jittered)
+  const pointBand = boxTop - 16;
+  raw.forEach((v, i) => {
+    const isOut = v < lower || v > upper;
+    const x = toX(v);
+    const jitter = Math.sin(i * 137.5) * 7;
+    ctx.beginPath(); ctx.arc(x, pointBand + jitter, isOut ? 7 : 5.5, 0, Math.PI * 2);
+    ctx.fillStyle   = isOut ? '#F43F5E' : '#0D9488';
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = isOut ? 2.5 : 1.5;
+    ctx.fill(); ctx.stroke();
+  });
+
+  // Legend
+  const lgX = PAD_L, lgY = H - 10;
+  ctx.textAlign = 'left'; ctx.font = `11px 'DM Mono', monospace`;
+  ctx.fillStyle = '#38BDF8'; ctx.fillRect(lgX, lgY-9, 12, 10);
+  ctx.strokeStyle = '#0F172A'; ctx.lineWidth = 1; ctx.strokeRect(lgX, lgY-9, 12, 10);
+  ctx.fillStyle = '#64748B'; ctx.fillText('IQR Box (Q1\u2013Q3)', lgX+16, lgY);
+  ctx.fillStyle = '#FACC15'; ctx.fillRect(lgX+136, lgY-9, 12, 10);
+  ctx.fillStyle = '#64748B'; ctx.fillText('Median', lgX+152, lgY);
+  ctx.beginPath(); ctx.arc(lgX+218, lgY-4, 5, 0, Math.PI*2); ctx.fillStyle='#F43F5E'; ctx.fill();
+  ctx.fillStyle = '#64748B'; ctx.fillText('Outlier', lgX+228, lgY);
+  ctx.beginPath(); ctx.arc(lgX+284, lgY-4, 5, 0, Math.PI*2); ctx.fillStyle='#0D9488'; ctx.fill();
+  ctx.fillStyle = '#64748B'; ctx.fillText('Normal', lgX+294, lgY);
+}
+
+
+function drawNormalDist(raw, lower, upper, stats) {
+  const canvas = document.getElementById('o-canvas');
+  canvas.height = 180;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = canvas.offsetWidth * dpr;
+  canvas.height = 180 * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = 180;
+  ctx.clearRect(0, 0, W, H);
+
+  const { mean, std } = stats;
+  const PAD_L = 56, PAD_R = 40, PAD_T = 16, PAD_B = 48;
+  const plotW = W - PAD_L - PAD_R;
+  const plotH = H - PAD_T - PAD_B;
+  const axisY = H - PAD_B;
+
+  // Show range ±4.5 std
+  const vMin = mean - 4.5*std, vMax = mean + 4.5*std;
+  const toX  = v => PAD_L + ((v - vMin) / (vMax - vMin)) * plotW;
+  const gaussian = v => Math.exp(-0.5 * ((v-mean)/std)**2) / (std * Math.sqrt(2*Math.PI));
+  const peakG = gaussian(mean);
+  const toY = g => PAD_T + plotH - (g/peakG) * plotH * 0.88;
+
+  // Background
+  ctx.fillStyle = '#F8FAFC';
+  ctx.fillRect(0, 0, W, H);
+
+  // Axis
+  ctx.strokeStyle = '#CBD5E1'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(PAD_L, axisY); ctx.lineTo(W-PAD_R, axisY); ctx.stroke();
+
+  // Grid
+  const tickCount = 6;
+  ctx.font = `11px 'DM Mono', monospace`;
+  ctx.textAlign = 'center'; ctx.fillStyle = '#64748B';
+  for (let i = 0; i <= tickCount; i++) {
+    const v = vMin + (vMax - vMin) * (i / tickCount);
+    const x = toX(v);
+    ctx.strokeStyle = '#E2E8F0'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(x, PAD_T); ctx.lineTo(x, axisY); ctx.stroke();
+    ctx.setLineDash([]);
+    const label = v >= 1000 ? (v/1000).toFixed(0)+'k' : v.toFixed(0);
+    ctx.fillStyle = '#64748B';
+    ctx.fillText(label, x, axisY + 17);
+  }
+
+  // Build curve path
+  const steps = 300;
+  const pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const v = vMin + (vMax - vMin) * (i/steps);
+    pts.push([toX(v), toY(gaussian(v))]);
+  }
+
+  // Filled outlier tails (left)
+  ctx.beginPath();
+  ctx.moveTo(toX(vMin), axisY);
+  pts.forEach(([x,y]) => { if (x <= toX(lower)) ctx.lineTo(x, y); });
+  ctx.lineTo(toX(lower), axisY);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(124,58,237,0.25)';
+  ctx.fill();
+
+  // Filled outlier tails (right)
+  ctx.beginPath();
+  ctx.moveTo(toX(upper), axisY);
+  pts.forEach(([x,y]) => { if (x >= toX(upper)) ctx.lineTo(x, y); });
+  ctx.lineTo(toX(vMax), axisY);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(124,58,237,0.25)';
+  ctx.fill();
+
+  // Filled normal zone (between bounds)
+  ctx.beginPath();
+  ctx.moveTo(toX(lower), axisY);
+  pts.forEach(([x,y]) => { if (x >= toX(lower) && x <= toX(upper)) ctx.lineTo(x, y); });
+  ctx.lineTo(toX(upper), axisY);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(13,148,136,0.12)';
+  ctx.fill();
+
+  // Curve stroke
+  ctx.beginPath();
+  pts.forEach(([x,y], i) => i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y));
+  ctx.strokeStyle = '#0F172A'; ctx.lineWidth = 2.5; ctx.setLineDash([]);
+  ctx.stroke();
+
+  // Bound lines (−3σ, +3σ)
+  [lower, upper].forEach((b, bi) => {
+    const x = toX(b);
+    ctx.strokeStyle = '#7C3AED'; ctx.lineWidth = 2; ctx.setLineDash([5,3]);
+    ctx.beginPath(); ctx.moveTo(x, PAD_T); ctx.lineTo(x, axisY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = `bold 10px 'DM Mono', monospace`;
+    ctx.fillStyle = '#7C3AED'; ctx.textAlign = 'center';
+    ctx.fillText(bi===0 ? '−3σ' : '+3σ', x, PAD_T + 11);
+  });
+
+  // Mean line
+  const mx = toX(mean);
+  ctx.strokeStyle = '#FACC15'; ctx.lineWidth = 2.5; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(mx, PAD_T+16); ctx.lineTo(mx, axisY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#B45309'; ctx.font = `bold 10px 'DM Mono', monospace`; ctx.textAlign='center';
+  ctx.fillText('μ', mx, PAD_T+26);
+
+  // Data points jittered along axis area
+  raw.forEach((v, i) => {
+    const isOut = v < lower || v > upper;
+    const x = toX(v);
+    const jitter = Math.sin(i * 137.5) * 9;
+    const py = axisY - 12 + jitter;
+    ctx.beginPath(); ctx.arc(x, py, isOut ? 7 : 5, 0, Math.PI*2);
+    ctx.fillStyle = isOut ? '#F43F5E' : '#0D9488';
+    ctx.strokeStyle = isOut ? '#fff' : 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = isOut ? 2 : 1.5;
+    ctx.fill(); ctx.stroke();
+  });
+
+  // Z-score annotations on curve
+  const zLabels = [[-3,'−3σ',lower],[-2,'−2σ',mean-2*std],[0,'μ',mean],[2,'+2σ',mean+2*std],[3,'+3σ',upper]];
+  zLabels.forEach(([z, label, val]) => {
+    const x = toX(val);
+    if (x < PAD_L || x > W-PAD_R) return;
+    ctx.strokeStyle = 'rgba(100,116,139,0.25)'; ctx.lineWidth=1; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(x, PAD_T+30); ctx.lineTo(x, axisY-22); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Legend
+  const lgX = PAD_L, lgY = H - 10;
+  ctx.textAlign = 'left'; ctx.font = `11px 'DM Mono', monospace`;
+  ctx.fillStyle = 'rgba(124,58,237,0.25)'; ctx.strokeStyle='#7C3AED'; ctx.lineWidth=1;
+  ctx.fillRect(lgX, lgY-9, 12, 10); ctx.strokeRect(lgX, lgY-9, 12, 10);
+  ctx.fillStyle = '#64748B'; ctx.fillText('Outlier zone (|z|>3)', lgX+16, lgY);
+  ctx.fillStyle = 'rgba(13,148,136,0.12)'; ctx.strokeStyle='#0D9488'; ctx.lineWidth=1;
+  ctx.fillRect(lgX+168, lgY-9, 12, 10); ctx.strokeRect(lgX+168, lgY-9, 12, 10);
+  ctx.fillStyle = '#64748B'; ctx.fillText('Normal (99.7%)', lgX+184, lgY);
+  ctx.beginPath(); ctx.arc(lgX+300+6, lgY-4, 5, 0, Math.PI*2); ctx.fillStyle='#F43F5E'; ctx.fill();
+  ctx.fillStyle = '#64748B'; ctx.fillText('Outlier', lgX+314, lgY);
+}
+
+function expandStrat(card, title, col, when, code, warn) {
+  document.querySelectorAll('.strat-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+  const d = document.getElementById('strat-detail');
+  d.style.display = 'block';
+  document.getElementById('sd-title').innerHTML = `<span style="color:${col};">${title}</span>`;
+  document.getElementById('sd-when').textContent  = 'When to use: ' + when;
+  document.getElementById('sd-code').textContent  = code;
+  document.getElementById('sd-warn').innerHTML    = '⚠️ Watch out: ' + warn;
+}
+
+/* ══ CODE EXAMPLES ══ */
+const EXAMPLES = [
+  {
+    tab:'📊 Detect with IQR', desc:'— The most robust outlier detection. No distribution assumption needed.',
+    code:`df = pd.DataFrame({
+    'name':   ['Alice','Bob','Carol','David','Emma','Frank','CEO','Grace','Henry'],
+    'salary': [28000, 32000, 35000, 31000, 29000, 34000, 250000, 33000, 30000]
+})
+
+print("=== Salary data ===")
+print(df.to_string(index=False))
+
+# IQR bounds
+Q1  = df['salary'].quantile(0.25)
+Q3  = df['salary'].quantile(0.75)
+IQR = Q3 - Q1
+lower = Q1 - 1.5 * IQR
+upper = Q3 + 1.5 * IQR
+
+print(f"Q1={Q1:,.0f}  Q3={Q3:,.0f}  IQR={IQR:,.0f}")
+print(f"Lower bound: {lower:,.0f}")
+print(f"Upper bound: {upper:,.0f}")
+
+# Flag outliers
+df['outlier'] = (df['salary'] < lower) | (df['salary'] > upper)
+
+print("=== Outliers detected ===")
+print(df[df['outlier']].to_string(index=False))`
+  },
+  {
+    tab:'📐 Detect with Z-Score', desc:'— Best for normally distributed data. Points with |z| > 3 are outliers.',
+    code:`from scipy import stats
+
+df = pd.DataFrame({
+    'name':   ['Alice','Bob','Carol','David','Emma','Frank','CEO','Grace'],
+    'salary': [28000, 32000, 35000, 31000, 29000, 34000, 250000, 33000]
+})
+
+# Compute Z-scores
+z_scores = np.abs(stats.zscore(df['salary']))
+df['z_score'] = z_scores.round(2)
+
+print("=== Z-Scores ===")
+print(df.to_string(index=False))
+
+# Flag outliers (threshold = 3)
+THRESHOLD = 3
+df['outlier'] = df['z_score'] > THRESHOLD
+outliers = df[df['outlier']]
+
+print(f"Threshold: |z| > {THRESHOLD}")
+print(f"Outliers found: {len(outliers)}")
+print("=== Outlier rows ===")
+print(outliers[['name','salary','z_score']].to_string(index=False))
+
+print(f"mean={df['salary'].mean():,.0f}  std={df['salary'].std():,.0f}")
+print(f"  CEO z-score = ({250000:,} - {int(df['salary'].mean()):,}) / {int(df['salary'].std()):,} = {df.loc[6,'z_score']}")`
+  },
+  {
+    tab:'🗑️ Remove Outliers', desc:'— Drop outlier rows entirely. Only when they are data errors.',
+    code:`df = pd.DataFrame({
+    'name':   ['Alice','Bob','Carol','David','Emma','CEO','Grace'],
+    'salary': [28000, 32000, 35000, 31000, 29000, 250000, 33000],
+    'dept':   ['Eng','Mkt','Eng','HR','Mkt','Exec','Eng']
+})
+
+Q1    = df['salary'].quantile(0.25)
+Q3    = df['salary'].quantile(0.75)
+IQR   = Q3 - Q1
+lower = Q1 - 1.5 * IQR
+upper = Q3 + 1.5 * IQR
+
+print(f"Before: {len(df)} rows | Bounds: [{lower:,.0f}, {upper:,.0f}]")
+
+# Remove rows outside bounds
+df_clean = df[(df['salary'] >= lower) & (df['salary'] <= upper)]
+
+print(f"After:  {len(df_clean)} rows ({len(df)-len(df_clean)} removed)")
+print("=== Clean DataFrame ===")
+print(df_clean.to_string(index=False))
+print(f"Mean before: {df['salary'].mean():,.0f}")
+print(f"Mean after:  {df_clean['salary'].mean():,.0f}")`
+  },
+  {
+    tab:'✂️ Cap (Winsorize)', desc:'— Clip extreme values to the boundary. Keeps row count intact.',
+    code:`df = pd.DataFrame({
+    'salary': [28000, 32000, 35000, 31000, 29000, 250000, 33000, -5000, 34000]
+})
+
+Q1    = df['salary'].quantile(0.25)
+Q3    = df['salary'].quantile(0.75)
+IQR   = Q3 - Q1
+lower = Q1 - 1.5 * IQR
+upper = Q3 + 1.5 * IQR
+
+print(f"Bounds: [{lower:,.0f}, {upper:,.0f}]")
+
+df['salary_original'] = df['salary']
+df['salary_capped']   = df['salary'].clip(lower=lower, upper=upper)
+
+print("=== Original vs Capped ===")
+print(df[['salary_original','salary_capped']].to_string())
+
+print(f"Row count: {len(df)} (unchanged!)")
+print(f"Mean original: {df['salary_original'].mean():,.0f}")
+print(f"Mean capped:   {df['salary_capped'].mean():,.0f}")
+print("Winsorize = replace extremes with boundary values, not remove them.")`
+  },
+  {
+    tab:'📐 Log Transform', desc:'— Compress the scale so outliers have less influence on models.',
+    code:`df = pd.DataFrame({
+    'salary': [28000, 32000, 35000, 31000, 29000, 250000, 33000, 30000]
+})
+
+df['log_salary'] = np.log1p(df['salary'])  # log1p = log(1+x), safe for zeros
+
+print("=== Original vs Log-Transformed ===")
+print(df[['salary','log_salary']].round(2).to_string())
+
+print(f"Original  std: {df['salary'].std():,.0f}")
+print(f"Log       std: {df['log_salary'].std():.4f}  (much smaller relative range)")
+
+print(f"Original  range: {df['salary'].max()-df['salary'].min():,.0f}")
+print(f"Log       range: {df['log_salary'].max()-df['log_salary'].min():.3f}")
+print("Log transform compresses outliers without removing them!")
+print("CEO salary 250000 -> {:.2f} (much less extreme)".format(np.log1p(250000)))`
+  },
+  {
+    tab:'🏷️ Flag & Keep', desc:'— When outliers are genuine (fraud, anomalies) — flag them for review.',
+    code:`df = pd.DataFrame({
+    'transaction_id': ['T001','T002','T003','T004','T005','T006','T007'],
+    'amount': [1200, 1350, 980, 1100, 85000, 1250, 99000],
+    'merchant': ['Shop A','Shop B','Shop A','Shop C','Unknown','Shop B','Unknown']
+})
+
+Q1    = df['amount'].quantile(0.25)
+Q3    = df['amount'].quantile(0.75)
+IQR   = Q3 - Q1
+lower = Q1 - 1.5 * IQR
+upper = Q3 + 1.5 * IQR
+
+# Flag — do NOT remove!
+df['is_suspicious'] = (df['amount'] > upper) | (df['amount'] < lower)
+
+print("=== All Transactions ===")
+print(df.to_string(index=False))
+
+print("=== Suspicious Transactions ===")
+print(df[df['is_suspicious']].to_string(index=False))
+
+print("These might be FRAUD — investigate don't delete!")
+print(f"Total: {len(df)}  |  Suspicious: {df['is_suspicious'].sum()}")`
+  },
+  {
+    tab:'📊 IQR vs Z-Score', desc:'— Compare both methods on the same dataset side by side.',
+    code:`from scipy import stats
+
+salaries = [28000, 32000, 35000, 31000, 29000, 34000, 250000, 33000, 30000, -5000]
+df = pd.DataFrame({'salary': salaries})
+
+# IQR method
+Q1    = df['salary'].quantile(0.25)
+Q3    = df['salary'].quantile(0.75)
+IQR   = Q3 - Q1
+iqr_mask = (df['salary'] < Q1-1.5*IQR) | (df['salary'] > Q3+1.5*IQR)
+
+# Z-Score method
+z_scores  = np.abs(stats.zscore(df['salary']))
+z_mask    = z_scores > 3
+
+df['IQR_outlier']     = iqr_mask
+df['ZScore_outlier']  = z_mask
+df['z_score']         = z_scores.round(2)
+
+print("=== IQR vs Z-Score comparison ===")
+print(df.to_string(index=False))
+
+print(f"IQR    detected: {iqr_mask.sum()} outliers  (bounds: [{Q1-1.5*IQR:,.0f}, {Q3+1.5*IQR:,.0f}])")
+print(f"Z-Score detected: {z_mask.sum()} outliers  (bounds: [{df['salary'].mean()-3*df['salary'].std():,.0f}, {df['salary'].mean()+3*df['salary'].std():,.0f}])")
+print("IQR is more robust — Z-score bounds are pulled by the outliers themselves!")`
+  },
+];
+
+let currentEx = 0;
+
+function loadEx(i) {
+  currentEx = i;
+  document.querySelectorAll('.ex-tab').forEach((t,ti) => t.classList.toggle('active', ti===i));
+  document.getElementById('code-editor').value = EXAMPLES[i].code;
+  document.getElementById('ex-desc-bar').innerHTML =
+    `<span style="color:#fca5a5;font-weight:600;">${EXAMPLES[i].tab}</span><span style="color:#8b949e;"> ${EXAMPLES[i].desc}</span>`;
+  clearOutput(); autoHeight();
+}
+
+async function runCode() {
+  const btn  = document.getElementById('run-btn');
+  const icon = document.getElementById('run-icon');
+  const out  = document.getElementById('code-output');
+  const dot  = document.getElementById('status-dot');
+  const stat = document.getElementById('status-txt');
+  const time = document.getElementById('exec-time');
+  btn.disabled=true; icon.textContent='⟳'; icon.classList.add('running-icon');
+  dot.style.background='#F59E0B'; stat.textContent='Running…';
+  out.style.color='#8b949e'; out.textContent='Executing…'; time.textContent='';
+  const t0 = Date.now();
+  try {
+    const r = await fetch('/api/run-code', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({code: document.getElementById('code-editor').value})
+    });
+    if (!r.ok) throw new Error(`Server ${r.status}: ${(await r.text()).substring(0,120)}`);
+    const d = await r.json();
+    time.textContent = `${Date.now()-t0}ms`;
+    if (d.error?.trim()) {
+      out.style.color='#ff7b72'; dot.style.background='#F43F5E'; stat.textContent='Error';
+      out.textContent = '✗  ' + d.error.trim();
+    } else {
+      out.style.color='#7ee787'; dot.style.background='#28c840'; stat.textContent='Done ✓';
+      out.textContent = d.output?.trim() || '(no output)';
+    }
+  } catch(err) {
+    out.style.color='#ff7b72'; dot.style.background='#F43F5E'; stat.textContent='Error';
+    out.textContent = '✗  ' + err.message;
+  } finally {
+    btn.disabled=false; icon.textContent='▶'; icon.classList.remove('running-icon');
+  }
+}
+function clearOutput() {
+  document.getElementById('code-output').style.color='#8b949e';
+  document.getElementById('code-output').textContent='\u25b8 Output will appear here after you click Run...';
+  document.getElementById('status-dot').style.background='#28c840';
+  document.getElementById('status-txt').textContent='Ready';
+  document.getElementById('exec-time').textContent='';
+}
+async function copyCode() {
+  try {
+    await navigator.clipboard.writeText(document.getElementById('code-editor').value);
+    const b=document.getElementById('copy-btn'); b.textContent='copied!'; b.style.color='#7ee787';
+    setTimeout(()=>{b.textContent='copy';b.style.color='';},1800);
+  } catch(e){}
+}
+function autoHeight() {
+  const ta=document.getElementById('code-editor');
+  ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,460)+'px';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Just populate the input — don't auto-detect so pills don't show red pre-click
+  document.getElementById('o-input').value = PRESETS['salary'];
+  loadEx(0);
+  const editor = document.getElementById('code-editor');
+  editor.addEventListener('keydown', e => {
+    if (e.key==='Tab') {
+      e.preventDefault();
+      const s=editor.selectionStart, en=editor.selectionEnd;
+      editor.value=editor.value.substring(0,s)+'    '+editor.value.substring(en);
+      editor.selectionStart=editor.selectionEnd=s+4;
+    }
+    if ((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runCode();}
+  });
+  editor.addEventListener('input', autoHeight);
+});
+</script>
+{% endblock %}

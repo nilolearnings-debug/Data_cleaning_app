@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}DataClean Academy — Learn Data Cleaning{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sora:['Sora','sans-serif'], dm:['DM Sans','sans-serif'], mono:['DM Mono','monospace'] },
+          colors: { brand:{ teal:'#0D9488',sky:'#0EA5E9',violet:'#7C3AED',pink:'#EC4899',red:'#F43F5E',navy:'#0F172A' } }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root{--teal:#0D9488;--teal-lt:#14B8A6;--sky:#0EA5E9;--violet:#7C3AED;--pink:#EC4899;--red:#F43F5E;--ink:#0F172A;--muted:#64748B;--subtle:#F8FAFC;--border:#E2E8F0;}
+    body{font-family:'DM Sans',sans-serif;background:#fff;color:var(--ink);-webkit-font-smoothing:antialiased;}
+    .grad-teal{background:linear-gradient(135deg,var(--teal),var(--sky));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .grad-violet{background:linear-gradient(135deg,var(--violet),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .grad-full{background:linear-gradient(135deg,var(--teal),var(--sky),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .s-label{display:inline-flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);background:rgba(13,148,136,0.08);border:1px solid rgba(13,148,136,0.2);border-radius:20px;padding:4px 12px;}
+    .s-title{font-family:'Sora',sans-serif;font-size:clamp(1.75rem,3.5vw,2.5rem);font-weight:800;color:var(--ink);letter-spacing:-0.03em;line-height:1.18;}
+    .s-desc{font-size:1rem;color:var(--muted);line-height:1.75;}
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;font-family:'DM Mono',monospace;letter-spacing:0.04em;}
+    .badge-teal{background:rgba(13,148,136,0.1);color:var(--teal);border:1px solid rgba(13,148,136,0.25);}
+    .badge-sky{background:rgba(14,165,233,0.1);color:var(--sky);border:1px solid rgba(14,165,233,0.25);}
+    .badge-violet{background:rgba(124,58,237,0.1);color:var(--violet);border:1px solid rgba(124,58,237,0.25);}
+    .badge-pink{background:rgba(236,72,153,0.1);color:var(--pink);border:1px solid rgba(236,72,153,0.25);}
+    .badge-red{background:rgba(244,63,94,0.1);color:var(--red);border:1px solid rgba(244,63,94,0.25);}
+    .badge-green{background:rgba(34,197,94,0.1);color:#15803d;border:1px solid rgba(34,197,94,0.25);}
+    .badge-amber{background:rgba(245,158,11,0.1);color:#b45309;border:1px solid rgba(245,158,11,0.25);}
+    .lv-basic{background:rgba(34,197,94,0.1);color:#15803d;border:1px solid rgba(34,197,94,0.3);padding:3px 10px;border-radius:6px;font-size:0.72rem;font-weight:700;font-family:'DM Mono',monospace;display:inline-flex;align-items:center;gap:4px;}
+    .lv-inter{background:rgba(245,158,11,0.1);color:#b45309;border:1px solid rgba(245,158,11,0.3);padding:3px 10px;border-radius:6px;font-size:0.72rem;font-weight:700;font-family:'DM Mono',monospace;display:inline-flex;align-items:center;gap:4px;}
+    .lv-adv{background:rgba(14,165,233,0.1);color:#0369a1;border:1px solid rgba(14,165,233,0.3);padding:3px 10px;border-radius:6px;font-size:0.72rem;font-weight:700;font-family:'DM Mono',monospace;display:inline-flex;align-items:center;gap:4px;}
+    .lv-expert{background:rgba(244,63,94,0.1);color:#be123c;border:1px solid rgba(244,63,94,0.3);padding:3px 10px;border-radius:6px;font-size:0.72rem;font-weight:700;font-family:'DM Mono',monospace;display:inline-flex;align-items:center;gap:4px;}
+    .card-white{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,0.04);transition:border-color 0.2s,box-shadow 0.2s,transform 0.2s;}
+    .card-white.hoverable:hover{border-color:rgba(13,148,136,0.35);box-shadow:0 8px 32px rgba(13,148,136,0.1);transform:translateY(-2px);}
+    .card-subtle{background:var(--subtle);border:1.5px solid var(--border);border-radius:16px;padding:24px;}
+    .btn-primary{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:linear-gradient(135deg,var(--teal),var(--sky));color:#fff;font-family:'Sora',sans-serif;font-weight:700;font-size:0.9rem;border-radius:12px;text-decoration:none;border:none;cursor:pointer;box-shadow:0 6px 24px rgba(13,148,136,0.28);transition:all 0.25s;position:relative;overflow:hidden;}
+    .btn-primary::before{content:'';position:absolute;top:0;left:0;width:60%;bottom:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);animation:btnShimmer 3.5s ease-in-out infinite 1.5s;}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(13,148,136,0.38);}
+    .btn-violet{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:linear-gradient(135deg,var(--violet),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-weight:700;font-size:0.9rem;border-radius:12px;text-decoration:none;border:none;cursor:pointer;box-shadow:0 6px 24px rgba(124,58,237,0.25);transition:all 0.25s;}
+    .btn-violet:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(124,58,237,0.38);}
+    .btn-outline{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:#fff;color:var(--ink);font-family:'Sora',sans-serif;font-weight:700;font-size:0.9rem;border-radius:12px;text-decoration:none;border:2px solid var(--border);cursor:pointer;transition:all 0.2s;}
+    .btn-outline:hover{border-color:var(--teal);color:var(--teal);background:#F0FDFA;}
+    .code-block{background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;padding:18px;font-family:'DM Mono',monospace;font-size:0.78rem;line-height:1.7;overflow-x:auto;color:#334155;}
+    .code-block .kw{color:#7C3AED;font-weight:600;} .code-block .fn{color:#0D9488;} .code-block .str{color:#0369A1;} .code-block .cmt{color:#94A3B8;font-style:italic;} .code-block .num{color:#F43F5E;}
+    .field{width:100%;background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:0.875rem;font-family:'DM Sans',sans-serif;color:var(--ink);transition:border-color 0.15s,box-shadow 0.15s;outline:none;}
+    .field:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,148,136,0.12);}
+    select.field option{background:#fff;}
+    .cell{display:inline-flex;align-items:center;justify-content:center;min-width:60px;padding:5px 10px;border-radius:8px;font-size:0.8rem;font-weight:600;font-family:'DM Mono',monospace;border:1.5px solid var(--border);background:var(--subtle);color:var(--ink);}
+    .cell.imputed{background:#F0FDFA;border-color:rgba(13,148,136,0.4);color:var(--teal);}
+    .cell.outlier{background:#FFF1F2;border-color:rgba(244,63,94,0.4);color:var(--red);}
+    .nav-btns{display:flex;gap:12px;justify-content:space-between;margin-top:48px;padding-top:24px;border-top:1.5px solid var(--border);flex-wrap:wrap;}
+    .acc-item{border:1.5px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;}
+    .acc-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;transition:background 0.15s;}
+    .acc-head:hover{background:var(--subtle);}
+    .acc-head.active{background:#F0FDFA;}
+    .acc-chevron{transition:transform 0.25s;color:var(--muted);}
+    .acc-head.active .acc-chevron{transform:rotate(180deg);color:var(--teal);}
+    .acc-body{max-height:0;overflow:hidden;transition:max-height 0.3s ease;}
+    .acc-body.open{max-height:300px;}
+    @keyframes btnShimmer{0%{transform:translateX(-100%) skew(-15deg)}100%{transform:translateX(300%) skew(-15deg)}}
+    @keyframes orbFloat1{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-55px) scale(1.05)}66%{transform:translate(-25px,28px) scale(0.97)}}
+    @keyframes orbFloat2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(50px,-40px) scale(1.08)}}
+    @keyframes orbFloat3{0%,100%{transform:translate(0,0)}40%{transform:translate(-28px,22px)}70%{transform:translate(22px,-28px)}}
+    @keyframes pillIn{from{opacity:0;transform:translateY(10px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes wordReveal{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes drawLine{from{width:0}to{width:100%}}
+    @keyframes dotPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.8);opacity:0.5}}
+    @keyframes neelu-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.7}}
+    @keyframes neelu-fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes neelu-bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+    @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="font-dm bg-white text-slate-900 antialiased">
+
+<!-- NAVBAR -->
+<nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+     style="background:rgba(255,255,255,0.93);backdrop-filter:blur(14px);border-bottom:1px solid rgba(0,0,0,0.07);">
+  <div class="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+    <!-- Left: GUVI logo + divider + app brand -->
+    <div class="flex items-center gap-3" style="flex-shrink:0;">
+      <a href="/" style="text-decoration:none;display:flex;align-items:center;">
+        <img src="/static/guvi_logo.png" alt="GUVI x HCL"
+             style="height: 56px;width:auto;object-fit:contain;display:block;"
+             onerror="this.style.display='none'"/>
+      </a>
+
+    </div>
+    <div class="hidden lg:flex items-center gap-1">
+      {% set pages=[('/missing-values','🕳️','Missing Values'),('/duplicates','🔁','Duplicates'),('/outliers','📊','Outliers'),('/skewness','〰️','Skewness'),('/scaling','⚖️','Scaling'),('/encoding','🔤','Encoding')] %}
+      {% for href,icon,label in pages %}
+      <a href="{{ href }}" class="flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all" style="color:{% if request.path==href %}var(--teal){% else %}var(--muted){% endif %};background:{% if request.path==href %}rgba(13,148,136,0.08){% else %}transparent{% endif %};">{{ icon }} {{ label }}</a>
+      {% endfor %}
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="/quiz" class="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl" style="background:var(--ink);color:#fff;font-family:'Sora',sans-serif;text-decoration:none;">Take Quiz 🧠</a>
+      <a href="/missing-values" class="px-4 py-2 text-sm font-semibold rounded-xl text-white" style="background:linear-gradient(135deg,var(--violet),var(--pink));font-family:'Sora',sans-serif;text-decoration:none;box-shadow:0 4px 14px rgba(124,58,237,0.3);">✨ Start Learning</a>
+    </div>
+  </div>
+</nav>
+
+<main style="padding-top:64px;">{% block content %}{% endblock %}</main>
+
+<!-- FOOTER -->
+<footer style="background:var(--ink);color:#8898aa;" class="pt-16 pb-10 mt-20">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+      <div class="col-span-2 md:col-span-1">
+        <div class="flex flex-col gap-3 mb-4">
+          <!-- GUVI logo inverted for dark footer -->
+          <img src="/static/for_dark.webp" alt="GUVI x HCL"
+               style="height:28px;width:auto;object-fit:contain;
+                      opacity:0.85;"
+               onerror="this.style.display='none'"/>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:24px;height:24px;background:linear-gradient(135deg,var(--teal),var(--sky));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;">⚗️</div>
+            <span style="font-family:'Sora',sans-serif;font-weight:800;color:#fff;font-size:0.88rem;">DataClean Academy</span>
+          </div>
+        </div>
+        <p class="text-sm leading-relaxed">Learn data cleaning interactively with live demos and AI-powered quizzes.</p>
+      </div>
+      <div><h4 class="text-white font-semibold text-sm mb-4" style="font-family:'Sora',sans-serif;">Core Modules</h4>
+        <ul class="space-y-2.5 text-sm"><li><a href="/missing-values" class="hover:text-white transition-colors">🕳️ Missing Values</a></li><li><a href="/duplicates" class="hover:text-white transition-colors">🔁 Duplicates</a></li><li><a href="/outliers" class="hover:text-white transition-colors">📊 Outliers</a></li></ul></div>
+      <div><h4 class="text-white font-semibold text-sm mb-4" style="font-family:'Sora',sans-serif;">Advanced</h4>
+        <ul class="space-y-2.5 text-sm"><li><a href="/skewness" class="hover:text-white transition-colors">〰️ Skewness</a></li><li><a href="/scaling" class="hover:text-white transition-colors">⚖️ Scaling</a></li><li><a href="/encoding" class="hover:text-white transition-colors">🔤 Encoding</a></li></ul></div>
+      <div><h4 class="text-white font-semibold text-sm mb-4" style="font-family:'Sora',sans-serif;">Resources</h4>
+        <ul class="space-y-2.5 text-sm"><li><a href="/quiz" style="color:var(--teal-lt);" class="hover:text-white transition-colors">🧠 AI Quiz</a></li><li><a href="https://pandas.pydata.org/docs/" target="_blank" class="hover:text-white transition-colors">Pandas Docs</a></li><li><a href="https://scikit-learn.org" target="_blank" class="hover:text-white transition-colors">Sklearn Docs</a></li></ul></div>
+    </div>
+    <div class="border-t pt-8 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm" style="border-color:rgba(255,255,255,0.1);">
+      <p>Built for <span class="text-white font-semibold">HCL GUVIans</span> 💙</p>
+      <p style="color:var(--teal-lt);font-size:0.8rem;font-family:'DM Mono',monospace;">DataClean Academy © 2025</p>
+    </div>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script>
+  AOS.init({duration:700,once:true,offset:80,easing:'ease-out-cubic'});
+  const navbar=document.getElementById('navbar');
+  window.addEventListener('scroll',()=>{navbar.style.boxShadow=window.scrollY>20?'0 2px 20px rgba(0,0,0,0.08)':'none';});
+  function accToggle(head){const body=head.nextElementSibling;const open=body.classList.contains('open');document.querySelectorAll('.acc-body').forEach(b=>b.classList.remove('open'));document.querySelectorAll('.acc-head').forEach(h=>h.classList.remove('active'));if(!open){body.classList.add('open');head.classList.add('active');}}
+</script>
+{% block scripts %}{% endblock %}
+
+<!-- NEELU CHATBOT (Groq) -->
+<style>
+#neelu-launcher{position:fixed;bottom:28px;right:28px;z-index:9998;width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--teal) 0%,var(--sky) 50%,var(--violet) 100%);border:none;cursor:pointer;box-shadow:0 4px 24px rgba(13,148,136,0.45);display:flex;align-items:center;justify-content:center;transition:transform 0.2s,box-shadow 0.2s;}
+#neelu-launcher:hover{transform:scale(1.08);box-shadow:0 6px 32px rgba(13,148,136,0.55);}
+#neelu-launcher .neelu-av{width:42px;height:42px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;font-size:26px;}
+#neelu-launcher .neelu-x{display:none;color:#fff;font-size:22px;font-weight:700;line-height:1;}
+#neelu-launcher.open .neelu-av{display:none;}
+#neelu-launcher.open .neelu-x{display:block;}
+#neelu-dot{position:absolute;top:2px;right:2px;width:13px;height:13px;background:var(--red);border-radius:50%;border:2px solid #fff;animation:neelu-pulse 1.8s infinite;display:none;}
+#neelu-window{position:fixed;bottom:100px;right:28px;z-index:9997;width:370px;max-height:560px;display:flex;flex-direction:column;border-radius:20px;overflow:hidden;box-shadow:0 12px 48px rgba(15,23,42,0.14),0 2px 8px rgba(0,0,0,0.06);background:#fff;transform:translateY(20px) scale(0.96);opacity:0;pointer-events:none;transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1),opacity 0.22s ease;}
+#neelu-window.open{transform:translateY(0) scale(1);opacity:1;pointer-events:all;}
+#neelu-header{background:linear-gradient(135deg,var(--ink) 0%,#1e3a5f 100%);padding:14px 16px;display:flex;align-items:center;gap:11px;flex-shrink:0;}
+#neelu-header .hdr-av{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--sky));display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;border:2px solid rgba(255,255,255,0.2);}
+.hdr-name{font-family:'Sora',sans-serif;font-weight:700;font-size:15px;color:#fff;letter-spacing:0.02em;}
+.hdr-status{font-size:11.5px;color:var(--teal-lt);display:flex;align-items:center;gap:5px;margin-top:1px;}
+.hdr-status::before{content:'';width:7px;height:7px;background:#22c55e;border-radius:50%;display:inline-block;}
+#neelu-clear{margin-left:auto;background:rgba(255,255,255,0.1);border:none;border-radius:8px;color:rgba(255,255,255,0.6);font-size:11px;padding:4px 9px;cursor:pointer;transition:background 0.15s;font-family:'DM Sans',sans-serif;}
+#neelu-clear:hover{background:rgba(255,255,255,0.2);color:#fff;}
+#neelu-ctx{background:#f0fff8;border-bottom:1px solid rgba(13,148,136,0.15);padding:6px 14px;font-size:11px;color:var(--teal);font-family:'DM Mono',monospace;display:flex;align-items:center;gap:5px;flex-shrink:0;}
+#neelu-msgs{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;}
+#neelu-msgs::-webkit-scrollbar{width:4px;}
+#neelu-msgs::-webkit-scrollbar-thumb{background:#e0f2f1;border-radius:4px;}
+.nm{display:flex;gap:8px;align-items:flex-end;animation:neelu-fadein 0.25s ease;}
+.nm.user{flex-direction:row-reverse;}
+.nm .bbl{max-width:80%;padding:10px 14px;border-radius:16px;font-size:13.5px;line-height:1.55;font-family:'DM Sans',sans-serif;}
+.nm.bot .bbl{background:#f0fff8;color:var(--ink);border-bottom-left-radius:4px;border:1px solid rgba(13,148,136,0.18);}
+.nm.user .bbl{background:linear-gradient(135deg,var(--teal),var(--sky));color:#fff;border-bottom-right-radius:4px;}
+.nm .ico{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--sky));display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.nm.user .ico{background:#e8f5e9;}
+.nm.typing .bbl{display:flex;align-items:center;gap:4px;padding:12px 16px!important;}
+.nm.typing .dot{width:7px;height:7px;background:var(--teal);border-radius:50%;animation:neelu-bounce 1.2s infinite ease-in-out;}
+.nm.typing .dot:nth-child(2){animation-delay:0.2s;} .nm.typing .dot:nth-child(3){animation-delay:0.4s;}
+#neelu-chips{padding:4px 14px 8px;display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;}
+.nchip{background:#f0fff8;border:1px solid rgba(13,148,136,0.3);color:var(--teal);font-size:11.5px;padding:5px 11px;border-radius:20px;cursor:pointer;transition:all 0.15s;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.nchip:hover{background:var(--teal);color:#fff;border-color:var(--teal);}
+#neelu-inp-area{border-top:1px solid #f0f0f8;padding:10px 12px;display:flex;gap:8px;align-items:flex-end;background:#fff;flex-shrink:0;}
+#neelu-inp{flex:1;border:1.5px solid var(--border);border-radius:12px;padding:9px 13px;font-size:13.5px;font-family:'DM Sans',sans-serif;color:var(--ink);outline:none;resize:none;line-height:1.45;max-height:90px;transition:border-color 0.15s;background:#fafafa;}
+#neelu-inp:focus{border-color:var(--teal);background:#fff;}
+#neelu-inp::placeholder{color:#b0c4be;}
+#neelu-send{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--teal),var(--sky));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform 0.15s,opacity 0.15s;}
+#neelu-send:hover{transform:scale(1.07);}
+#neelu-send:disabled{opacity:0.4;cursor:not-allowed;}
+#neelu-send svg{width:17px;height:17px;fill:#fff;}
+{% raw %}@media(max-width:440px){#neelu-window{width:calc(100vw - 32px);right:16px;bottom:88px;}#neelu-launcher{right:16px;bottom:16px;}}{% endraw %}
+</style>
+
+<button id="neelu-launcher" aria-label="Chat with Neelu">
+  <span class="neelu-av">🤖</span><span class="neelu-x">✕</span><span id="neelu-dot"></span>
+</button>
+<div id="neelu-window" role="dialog">
+  <div id="neelu-header">
+    <div class="hdr-av">🤖</div>
+    <div><div class="hdr-name">Neelu</div><div class="hdr-status">DataClean Academy Tutor · Always here</div></div>
+    <button id="neelu-clear">Clear</button>
+  </div>
+  <div id="neelu-ctx"><span>📍</span><span id="neelu-pg">Loading…</span></div>
+  <div id="neelu-msgs"></div>
+  <div id="neelu-chips"></div>
+  <div id="neelu-inp-area">
+    <textarea id="neelu-inp" placeholder="Ask Neelu anything about data cleaning…" rows="1"></textarea>
+    <button id="neelu-send"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const CTX={
+    '/':               {label:'Home — Overview',        topic:'all 6 data cleaning modules: missing values, duplicates, outliers, skewness, feature scaling, encoding'},
+    '/missing-values': {label:'Missing Values',         topic:'missing value imputation — MCAR/MAR/MNAR, mean/median/mode, SimpleImputer, KNNImputer, IterativeImputer (MICE), segmented imputation'},
+    '/duplicates':     {label:'Duplicates',             topic:'duplicate row detection and removal — drop_duplicates, full vs subset, impact on analysis'},
+    '/outliers':       {label:'Outliers',               topic:'outlier detection using IQR and Z-score, handling: remove, cap, transform, keep'},
+    '/skewness':       {label:'Skewness',               topic:'skewness types, log/sqrt/Box-Cox transformations and when to use each'},
+    '/scaling':        {label:'Feature Scaling',        topic:'Min-Max, Standardization, Robust Scaling and when each is appropriate'},
+    '/encoding':       {label:'Encoding',               topic:'Label Encoding, One-Hot Encoding, Ordinal Encoding, dummy variable trap'},
+    '/quiz':           {label:'AI Quiz',                topic:'AI-powered quiz covering all 6 data cleaning modules'},
+  };
+  const CHIPS={
+    '/':               ['What is data cleaning?','Where do I start?','Which module first?'],
+    '/missing-values': ['MCAR vs MAR vs MNAR?','When to use KNN imputer?','How do I use the demo?'],
+    '/duplicates':     ['How do I use this demo?','Full vs subset drop?','Impact on ML models?'],
+    '/outliers':       ['IQR vs Z-score?','When to keep outliers?','How do I use the demo?'],
+    '/skewness':       ['Log vs Box-Cox?','How to detect skewness?','How do I use the demo?'],
+    '/scaling':        ['Min-Max vs Standardization?','When not to scale?','How do I use the demo?'],
+    '/encoding':       ['Label vs One-Hot?','What is dummy variable trap?','How do I use the demo?'],
+    '/quiz':           ['How is the quiz scored?','What topics are covered?','How many questions?'],
+  };
+  const path=window.location.pathname;
+  const ctx=CTX[path]||{label:'DataClean Academy',topic:'data cleaning'};
+  const chips=CHIPS[path]||['What is data cleaning?','Best practices?'];
+
+  const launcher=document.getElementById('neelu-launcher');
+  const win=document.getElementById('neelu-window');
+  const msgs=document.getElementById('neelu-msgs');
+  const inp=document.getElementById('neelu-inp');
+  const sendBtn=document.getElementById('neelu-send');
+  const clearBtn=document.getElementById('neelu-clear');
+  const pgEl=document.getElementById('neelu-pg');
+  const chipsEl=document.getElementById('neelu-chips');
+  const dot=document.getElementById('neelu-dot');
+
+  pgEl.textContent=ctx.label;
+  let history=[],isOpen=false;
+
+  chips.forEach(t=>{const c=document.createElement('button');c.className='nchip';c.textContent=t;c.onclick=()=>send(t);chipsEl.appendChild(c);});
+  launcher.onclick=()=>{isOpen=!isOpen;win.classList.toggle('open',isOpen);launcher.classList.toggle('open',isOpen);dot.style.display='none';if(isOpen&&msgs.children.length===0)welcome();if(isOpen)setTimeout(()=>inp.focus(),300);};
+  clearBtn.onclick=()=>{msgs.innerHTML='';history=[];welcome();};
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();go();}});
+  sendBtn.onclick=go;
+  inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,90)+'px';});
+
+  function welcome(){
+    const home=`Hi, GUVIan! 👋 I'm **Neelu**, your DataClean Academy tutor!\n\nI know all **6 data cleaning modules** inside out. Try asking:\n• _"What is KNN imputation?"_\n• _"When should I use Min-Max scaling?"_\n• _"How do I detect outliers?"_\n\nWhat would you like to learn today? 🚀`;
+    const page=`Hi, GUVIan! 👋 I'm **Neelu**, your DataClean tutor.\n\nYou're on **${ctx.label}**. Ask me anything about this topic, the demo, or any data cleaning concept! 🎯`;
+    bot(path==='/'?home:page);
+  }
+  function go(){const t=inp.value.trim();if(!t)return;inp.value='';inp.style.height='auto';send(t);}
+
+  function userBbl(t){const d=document.createElement('div');d.className='nm user';d.innerHTML=`<div class="ico">👤</div><div class="bbl">${esc(t)}</div>`;msgs.appendChild(d);scroll();}
+  function bot(t){const d=document.createElement('div');d.className='nm bot';d.innerHTML=`<div class="ico">🤖</div><div class="bbl">${fmt(t)}</div>`;msgs.appendChild(d);scroll();return d;}
+  function typing(){const d=document.createElement('div');d.className='nm bot typing';d.id='nt';d.innerHTML=`<div class="ico">🤖</div><div class="bbl"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;msgs.appendChild(d);scroll();}
+  function rmTyping(){const t=document.getElementById('nt');if(t)t.remove();}
+
+  async function send(text){
+    userBbl(text);history.push({role:'user',content:text});
+    sendBtn.disabled=true;inp.disabled=true;typing();
+    try{
+      const r=await fetch('/api/neelu-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history:history.slice(-10),page_topic:ctx.topic,page_label:ctx.label})});
+      const d=await r.json();rmTyping();
+      if(d.error){bot(`Sorry GUVIan! Error: _${esc(d.error)}_`);}
+      else{bot(d.reply);history.push({role:'assistant',content:d.reply});}
+    }catch{rmTyping();bot("Oops GUVIan! Network error. Try again! 🙏");}
+    finally{sendBtn.disabled=false;inp.disabled=false;inp.focus();}
+  }
+  function scroll(){msgs.scrollTop=msgs.scrollHeight;}
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function fmt(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/_(.+?)_/g,'<em>$1</em>').replace(/`(.+?)`/g,'<code style="background:#e0f7f4;padding:1px 5px;border-radius:4px;font-family:\'DM Mono\',monospace;font-size:12px;color:var(--teal);">$1</code>').replace(/\n/g,'<br>');}
+  setTimeout(()=>{if(!isOpen)dot.style.display='block';},3000);
+})();
+</script>
+</body>
+</html>

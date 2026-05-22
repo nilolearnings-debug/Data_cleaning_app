@@ -1,0 +1,1287 @@
+{% extends "base.html" %}
+{% block title %}Missing Values — DataClean Academy{% endblock %}
+
+{% block extra_head %}
+<style>
+:root{--teal:#0D9488;--teal-lt:#14B8A6;--sky:#0EA5E9;--violet:#7C3AED;--pink:#EC4899;--red:#F43F5E;--ink:#0F172A;--muted:#64748B;--subtle:#F8FAFC;--border:#E2E8F0;}
+
+/* ── Animations ── */
+@keyframes fadeUp    {from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn     {from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
+@keyframes pulse-red {0%,100%{box-shadow:0 0 0 0 rgba(244,63,94,0.4)}50%{box-shadow:0 0 0 8px rgba(244,63,94,0)}}
+@keyframes fillBar   {from{width:0}to{width:var(--w)}}
+@keyframes shimmer   {0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes bounce-in {0%{transform:scale(0.3);opacity:0}60%{transform:scale(1.15)}80%{transform:scale(0.95)}100%{transform:scale(1);opacity:1}}
+@keyframes tick      {0%{stroke-dashoffset:24}100%{stroke-dashoffset:0}}
+
+/* ── Hero ── */
+.mv-hero{padding:72px 0 0;background:#fff;position:relative;overflow:hidden;border-bottom:1.5px solid var(--border);}
+.mv-orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;}
+.orb-a{width:600px;height:600px;top:-260px;right:-120px;background:radial-gradient(circle,rgba(14,165,233,0.1) 0%,transparent 70%);}
+.orb-b{width:400px;height:400px;bottom:-150px;left:-80px;background:radial-gradient(circle,rgba(13,148,136,0.08) 0%,transparent 70%);}
+
+/* ── Section ── */
+.mv-section{padding:64px 0;border-bottom:1.5px solid var(--border);}
+.mv-section:last-child{border-bottom:none;}
+
+/* ── MCAR/MAR/MNAR scenario cards ── */
+.scenario-card{
+  background:#fff;border:2px solid var(--border);border-radius:20px;padding:24px;
+  cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;
+}
+.scenario-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.25s;}
+.scenario-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,0.09);}
+.scenario-card.active-mcar{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,148,136,0.15);}
+.scenario-card.active-mar {border-color:#F59E0B;box-shadow:0 0 0 3px rgba(245,158,11,0.15);}
+.scenario-card.active-mnar{border-color:var(--red); box-shadow:0 0 0 3px rgba(244,63,94,0.15);}
+
+/* ── Dataset table ── */
+.ds-table{width:100%;border-collapse:collapse;font-size:0.82rem;font-family:'DM Mono',monospace;}
+.ds-table th{background:var(--subtle);padding:9px 14px;text-align:left;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);border-bottom:1.5px solid var(--border);}
+.ds-table td{padding:9px 14px;border-bottom:1px solid var(--border);color:var(--ink);transition:background 0.2s;}
+.ds-table tr:hover td{background:rgba(13,148,136,0.03);}
+.cell-missing{
+  background:rgba(244,63,94,0.08)!important;color:var(--red)!important;
+  font-weight:700;border-radius:6px;animation:pulse-red 2s infinite;
+  text-align:center;
+}
+.cell-imputed{
+  background:rgba(13,148,136,0.1)!important;color:var(--teal)!important;
+  font-weight:700;border-radius:6px;
+  animation:popIn 0.35s ease both;
+}
+
+/* ── Method selector tabs ── */
+.m-tab{
+  flex:1;padding:12px 10px;border:2px solid var(--border);border-radius:14px;
+  background:#fff;cursor:pointer;transition:all 0.2s;text-align:center;
+}
+.m-tab:hover{border-color:var(--teal);background:rgba(13,148,136,0.04);}
+.m-tab.active{border-color:var(--teal);background:rgba(13,148,136,0.08);box-shadow:0 0 0 3px rgba(13,148,136,0.12);}
+.m-tab .tab-icon{font-size:1.4rem;margin-bottom:4px;}
+.m-tab .tab-name{font-family:'Sora',sans-serif;font-weight:700;font-size:0.8rem;color:var(--ink);}
+.m-tab .tab-sub{font-size:0.68rem;color:var(--muted);margin-top:2px;}
+
+/* ── Impact bar ── */
+.impact-bar{height:10px;border-radius:9999px;background:var(--border);overflow:hidden;margin-top:6px;}
+.impact-fill{height:100%;border-radius:9999px;animation:fillBar 1.2s ease both;}
+
+/* ── Imputation playground ── */
+.playground{
+  background:linear-gradient(135deg,rgba(13,148,136,0.03),rgba(14,165,233,0.02));
+  border:2px solid rgba(13,148,136,0.2);border-radius:24px;padding:32px;
+}
+.data-pill{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:52px;padding:6px 12px;border-radius:10px;
+  font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:700;
+  border:2px solid var(--border);background:#fff;
+  cursor:default;transition:all 0.3s;
+  position:relative;
+}
+.data-pill.is-missing{
+  background:rgba(244,63,94,0.08);border-color:rgba(244,63,94,0.4);
+  color:var(--red);animation:pulse-red 2s infinite;cursor:pointer;
+}
+.data-pill.is-missing::after{content:'click';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:0.6rem;color:var(--muted);white-space:nowrap;}
+.data-pill.is-imputed{
+  background:rgba(13,148,136,0.1);border-color:rgba(13,148,136,0.4);
+  color:var(--teal);animation:bounce-in 0.4s ease;
+}
+.data-pill.is-imputed::after{display:none;}
+
+/* ── Comparison chart bars ── */
+.chart-bar{
+  display:flex;align-items:center;gap:10px;margin-bottom:12px;
+}
+.bar-track{flex:1;height:28px;background:var(--subtle);border-radius:8px;overflow:hidden;position:relative;}
+.bar-val{height:100%;border-radius:8px;transition:width 0.8s cubic-bezier(0.34,1.56,0.64,1);display:flex;align-items:center;padding-left:10px;color:#fff;font-size:0.75rem;font-weight:700;font-family:'DM Mono',monospace;}
+
+/* ── Method detail panel ── */
+.method-panel{display:none;animation:fadeUp 0.35s ease both;}
+.method-panel.show{display:block;}
+
+/* ── Code snippet ── */
+.code-block{background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;padding:16px;font-family:'DM Mono',monospace;font-size:0.77rem;line-height:1.7;overflow-x:auto;color:#334155;}
+.kw{color:#7C3AED;font-weight:600;}.fn{color:#0D9488;}.str{color:#0369A1;}.cmt{color:#94A3B8;font-style:italic;}.num{color:#F43F5E;}
+
+/* ── Accordion ── */
+.adv-acc{border:1.5px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;background:#fff;}
+.adv-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;transition:background 0.15s;}
+.adv-head:hover{background:var(--subtle);}
+.adv-head.open{background:rgba(13,148,136,0.04);}
+.adv-body{max-height:0;overflow:hidden;transition:max-height 0.35s ease;}
+.adv-body.open{max-height:400px;}
+.adv-chevron{transition:transform 0.25s;color:var(--muted);}
+.adv-head.open .adv-chevron{transform:rotate(180deg);color:var(--teal);}
+
+/* ── Missing % simulator ── */
+.pct-slider{width:100%;-webkit-appearance:none;height:6px;border-radius:9999px;background:linear-gradient(90deg,var(--teal) var(--val,30%),var(--border) var(--val,30%));outline:none;cursor:pointer;}
+.pct-slider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--teal);box-shadow:0 2px 8px rgba(13,148,136,0.4);cursor:pointer;}
+
+/* ── Decision tree ── */
+.dt-node{background:#fff;border:2px solid var(--border);border-radius:12px;padding:12px 16px;text-align:center;font-size:0.82rem;font-weight:600;font-family:'Sora',sans-serif;transition:all 0.2s;cursor:default;}
+.dt-node.highlight{border-color:var(--teal);background:rgba(13,148,136,0.07);color:var(--teal);transform:scale(1.05);}
+.dt-node.dimmed{opacity:0.3;}
+.dt-arrow{text-align:center;color:var(--muted);font-size:1rem;margin:4px 0;}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ HERO ══ -->
+<section class="mv-hero">
+  <div class="mv-orb orb-a"></div>
+  <div class="mv-orb orb-b"></div>
+  <div class="max-w-5xl mx-auto px-6 pb-12" style="position:relative;z-index:1;">
+    <div data-aos="fade-up">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <span class="s-label">Module 1 of 6</span>
+        <span class="badge badge-teal">🕳️ Missing Values</span>
+        <span style="font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace;">~15 min · Interactive</span>
+      </div>
+      <h1 style="font-family:'Sora',sans-serif;font-size:clamp(2.2rem,4.5vw,3.2rem);font-weight:800;letter-spacing:-0.04em;line-height:1.12;color:var(--ink);margin-bottom:16px;">
+        Missing Values —<br/>
+        <span style="background:linear-gradient(135deg,var(--teal),var(--sky));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Detect, Decide, Impute</span>
+      </h1>
+      <p style="font-size:1rem;color:var(--muted);max-width:580px;line-height:1.8;margin-bottom:32px;">
+        Up to <strong style="color:var(--ink);">30% of real-world data</strong> is missing. The wrong imputation strategy can silently bias your entire model. Learn to spot the difference and fix it right.
+      </p>
+
+      <!-- Stats row -->
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:36px;">
+        {% for stat,label,col in [('30%','Real datasets have missing data','var(--teal)'),('4','Imputation methods to master','var(--sky)'),('3','Types of missingness','var(--violet)'),('🎮','Live interactive demos','var(--pink)')] %}
+        <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,0.04);">
+          <div style="font-family:'Sora',sans-serif;font-size:1.5rem;font-weight:800;color:{{col}};">{{stat}}</div>
+          <div style="font-size:0.75rem;color:var(--muted);max-width:90px;line-height:1.4;">{{label}}</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Module progress -->
+      <div style="display:flex;align-items:center;gap:8px;">
+        {% for i in range(1,7) %}
+        <div style="flex:1;max-width:72px;"><div style="height:5px;border-radius:9999px;background:{% if i==1 %}linear-gradient(90deg,var(--teal),var(--sky)){% else %}var(--border){% endif %};"></div></div>
+        {% endfor %}
+        <span style="font-size:0.7rem;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap;margin-left:4px;">1 / 6</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ SECTION 1 + 3 MERGED: IMPUTATION PLAYGROUND ══ -->
+<section class="mv-section">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up">
+      <div class="s-label mb-3">Section 1 · Hands-on</div>
+      <h2 class="s-title mb-2">Imputation Playground 🎮</h2>
+      <p class="s-desc mb-8">Here is the employee dataset with missing values shown in <span style="color:var(--red);font-weight:700;">red</span>. Pick a method, then click any red <strong>NaN</strong> cell to fill it. Switch methods any time — see how different strategies give different results.</p>
+    </div>
+
+    <!-- ── METHOD SELECTOR ── -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;" data-aos="fade-up" data-aos-delay="60">
+      <div class="m-tab active" id="mt-mean"   onclick="selectMethod('mean')">
+        <div class="tab-icon">📊</div>
+        <div class="tab-name">Mean</div>
+        <div class="tab-sub">Normal data</div>
+      </div>
+      <div class="m-tab" id="mt-median" onclick="selectMethod('median')">
+        <div class="tab-icon">📍</div>
+        <div class="tab-name">Median</div>
+        <div class="tab-sub">Skewed / outliers</div>
+      </div>
+      <div class="m-tab" id="mt-mode"   onclick="selectMethod('mode')">
+        <div class="tab-icon">🏷️</div>
+        <div class="tab-name">Mode</div>
+        <div class="tab-sub">Categorical</div>
+      </div>
+      <div class="m-tab" id="mt-knn"    onclick="selectMethod('knn')">
+        <div class="tab-icon">🤖</div>
+        <div class="tab-name">KNN</div>
+        <div class="tab-sub">Context-aware</div>
+      </div>
+    </div>
+
+    <!-- ── METHOD INFO STRIP ── -->
+    <div id="method-info-strip" style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;" data-aos="fade-up" data-aos-delay="80">
+      <div style="flex:1;min-width:220px;">
+        <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:0.9rem;color:var(--ink);margin-bottom:4px;" id="mi-title">📊 Mean Imputation</div>
+        <p style="font-size:0.81rem;color:var(--muted);line-height:1.65;margin:0;" id="mi-desc">Fills missing numbers with the column average. Fast and simple — but sensitive to outliers.</p>
+      </div>
+      <div class="code-block" style="font-size:0.73rem;padding:10px 14px;min-width:280px;flex:1;" id="mi-code"></div>
+    </div>
+
+    <!-- ── DATASET TABLE ── -->
+    <div style="background:#fff;border:1.5px solid var(--border);border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.05);margin-bottom:20px;" data-aos="fade-up" data-aos-delay="100">
+      <!-- Table header bar -->
+      <div style="padding:14px 20px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:0.92rem;">employees.csv</div>
+          <div style="font-size:0.7rem;color:var(--muted);font-family:'DM Mono',monospace;">8 rows × 5 cols · <span style="color:var(--red);" id="missing-count">5 missing values</span></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span style="font-size:0.7rem;padding:3px 10px;border-radius:20px;background:rgba(244,63,94,0.08);color:var(--red);border:1px solid rgba(244,63,94,0.25);">■ NaN = missing — click to fill</span>
+          <span style="font-size:0.7rem;padding:3px 10px;border-radius:20px;background:rgba(13,148,136,0.08);color:var(--teal);border:1px solid rgba(13,148,136,0.25);">■ teal = imputed</span>
+          <button onclick="resetAll()" style="padding:5px 12px;font-size:0.72rem;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);font-family:'DM Sans',sans-serif;">↺ Reset</button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div style="overflow-x:auto;">
+        <table class="ds-table" id="pg-table">
+          <thead><tr>
+            <th>#</th><th>Name</th><th>Age</th><th>Salary (£k)</th><th>Department</th><th>Score</th>
+          </tr></thead>
+          <tbody id="pg-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Stats footer -->
+      <div style="padding:10px 20px;border-top:1px solid var(--border);background:var(--subtle);display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+        <div style="font-size:0.72rem;color:var(--muted);">Column stats (from non-missing data):</div>
+        <div id="col-stats" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
+        <div style="margin-left:auto;font-size:0.72rem;font-family:'DM Mono',monospace;color:var(--teal);font-weight:600;" id="fill-progress"></div>
+      </div>
+    </div>
+
+    <!-- ── MISSING % BARS ── -->
+    <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:18px 20px;" data-aos="fade-up" data-aos-delay="120">
+      <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:0.85rem;margin-bottom:12px;">📊 Missing % per Column</div>
+      <div id="pct-bars"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SECTION 2: MCAR / MAR / MNAR EXPLORER ══ -->
+<section class="mv-section" style="background:var(--subtle);">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up">
+      <div class="s-label mb-3">Section 2 · The "Why" matters</div>
+      <h2 class="s-title mb-2">What <em>Type</em> of Missing is It?</h2>
+      <p class="s-desc mb-8">The type of missingness determines which fix to use. Click each scenario to explore — wrong choice = biased model.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;" data-aos="fade-up" data-aos-delay="100">
+      <!-- MCAR -->
+      <div class="scenario-card" id="sc-mcar" onclick="showScenario('mcar')">
+        <div style="font-size:2rem;margin-bottom:10px;">🎲</div>
+        <div style="font-family:'Sora',sans-serif;font-weight:800;color:var(--teal);font-size:1rem;margin-bottom:4px;">MCAR</div>
+        <div style="font-size:0.7rem;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:10px;">Missing Completely at Random</div>
+        <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;">Pure chance. No pattern. Any row equally likely to be missing.</div>
+        <div style="margin-top:12px;padding:6px 10px;background:rgba(13,148,136,0.07);border-radius:8px;font-size:0.72rem;color:var(--teal);font-family:'DM Mono',monospace;">Easiest to handle ✓</div>
+      </div>
+      <!-- MAR -->
+      <div class="scenario-card" id="sc-mar" onclick="showScenario('mar')">
+        <div style="font-size:2rem;margin-bottom:10px;">🔗</div>
+        <div style="font-family:'Sora',sans-serif;font-weight:800;color:#B45309;font-size:1rem;margin-bottom:4px;">MAR</div>
+        <div style="font-size:0.7rem;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:10px;">Missing at Random</div>
+        <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;">Related to other observed columns. Predictable from data.</div>
+        <div style="margin-top:12px;padding:6px 10px;background:rgba(245,158,11,0.07);border-radius:8px;font-size:0.72rem;color:#B45309;font-family:'DM Mono',monospace;">Use KNN / MICE ⚠</div>
+      </div>
+      <!-- MNAR -->
+      <div class="scenario-card" id="sc-mnar" onclick="showScenario('mnar')">
+        <div style="font-size:2rem;margin-bottom:10px;">⚠️</div>
+        <div style="font-family:'Sora',sans-serif;font-weight:800;color:var(--red);font-size:1rem;margin-bottom:4px;">MNAR</div>
+        <div style="font-size:0.7rem;font-family:'DM Mono',monospace;color:var(--muted);margin-bottom:10px;">Missing Not at Random</div>
+        <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;">Related to the missing value itself. Needs domain knowledge.</div>
+        <div style="margin-top:12px;padding:6px 10px;background:rgba(244,63,94,0.07);border-radius:8px;font-size:0.72rem;color:var(--red);font-family:'DM Mono',monospace;">Hardest — beware ✗</div>
+      </div>
+    </div>
+
+    <!-- Scenario detail panel -->
+    <div id="scenario-detail" style="display:none;animation:fadeUp 0.35s ease;" data-aos="fade-up">
+      <div style="background:#fff;border:2px solid var(--border);border-radius:20px;padding:28px;" id="scenario-box">
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ SECTION 4: DECISION GUIDE ══ -->
+<section class="mv-section" style="background:var(--subtle);">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up">
+      <div class="s-label mb-3">Section 4 · When to use what</div>
+      <h2 class="s-title mb-2">The Missing Value Decision Guide</h2>
+      <p class="s-desc mb-8">Use the slider to set your missing % — the guide highlights the recommended strategy.</p>
+    </div>
+
+    <div style="background:#fff;border:1.5px solid var(--border);border-radius:20px;padding:28px;" data-aos="fade-up" data-aos-delay="80">
+      <!-- Slider -->
+      <div style="margin-bottom:28px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:0.85rem;font-weight:600;color:var(--ink);">Missing data in column:</span>
+          <span style="font-family:'Sora',sans-serif;font-weight:800;font-size:1.1rem;" id="pct-display" style="color:var(--teal);">30%</span>
+        </div>
+        <input type="range" min="1" max="100" value="30" id="pct-slider" class="pct-slider" oninput="updateDecisionTree(this.value)" style="--val:30%"/>
+        <div style="display:flex;justify-content:space-between;font-size:0.68rem;color:var(--muted);margin-top:4px;">
+          <span>1%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+        </div>
+      </div>
+
+      <!-- Decision tree nodes -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;" id="dt-nodes">
+        <div class="dt-node" id="dt-impute-simple" style="border-color:var(--teal);">
+          <div style="font-size:1.1rem;margin-bottom:4px;">✅</div>
+          <div style="color:var(--teal);">Impute Simply</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:4px;">Mean / Median / Mode</div>
+          <div style="font-size:0.68rem;font-family:'DM Mono',monospace;margin-top:6px;color:var(--muted);">missing &lt; 10%</div>
+        </div>
+        <div class="dt-node" id="dt-impute-smart">
+          <div style="font-size:1.1rem;margin-bottom:4px;">🤖</div>
+          <div>Impute Smartly</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:4px;">KNN / MICE / Regression</div>
+          <div style="font-size:0.68rem;font-family:'DM Mono',monospace;margin-top:6px;color:var(--muted);">missing 10–40%</div>
+        </div>
+        <div class="dt-node" id="dt-drop">
+          <div style="font-size:1.1rem;margin-bottom:4px;">🗑️</div>
+          <div>Drop Column</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:4px;">Too much missing data</div>
+          <div style="font-size:0.68rem;font-family:'DM Mono',monospace;margin-top:6px;color:var(--muted);">missing &gt; 40%</div>
+        </div>
+      </div>
+
+      <!-- Recommendation box -->
+      <div id="dt-recommendation" style="margin-top:16px;padding:14px 18px;border-radius:12px;font-size:0.88rem;font-weight:600;line-height:1.6;transition:all 0.3s;"></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ SECTION 5: ADVANCED METHODS ══ -->
+<section class="mv-section">
+  <div class="max-w-5xl mx-auto px-6">
+    <div data-aos="fade-up">
+      <div class="s-label mb-3">Section 5 · Go deeper</div>
+      <h2 class="s-title mb-2">Advanced Imputation Methods</h2>
+      <p class="s-desc mb-8">Click each method to expand the explanation and code.</p>
+    </div>
+
+    <div data-aos="fade-up" data-aos-delay="80">
+      {% set methods = [
+        ('🔵','SimpleImputer','sklearn — strategies: mean, median, most_frequent, constant','var(--sky)',
+         'SimpleImputer is scikit-learn\'s built-in imputer. It applies a single strategy across an entire column — ideal for quick pipelines.',
+         'from sklearn.impute import SimpleImputer\nimp = SimpleImputer(strategy=\'median\')\nX_clean = imp.fit_transform(X)'),
+        ('🟣','KNN Imputer','Uses nearest neighbours — context-aware','var(--violet)',
+         'Finds k similar rows based on other features and averages their values. Much smarter than global mean — captures local patterns in data.',
+         'from sklearn.impute import KNNImputer\nimp = KNNImputer(n_neighbors=5)\nX_clean = imp.fit_transform(X)'),
+        ('🟡','Group-wise (Segmented)','Impute within groups — e.g. by department','#B45309',
+         'Instead of global mean, compute the mean/median within each group (e.g., department, city, category). Far more accurate for structured data.',
+         'df[\'salary\'] = df.groupby(\'department\')[\'salary\']\\\n    .transform(lambda x: x.fillna(x.median()))'),
+        ('🔴','Iterative (MICE)','Gold standard — models each feature with all others','var(--red)',
+         'Multiple Imputation by Chained Equations. Each feature is modelled as a function of all others. Best for MAR data — the gold standard.',
+         'from sklearn.experimental import enable_iterative_imputer\nfrom sklearn.impute import IterativeImputer\nimp = IterativeImputer(max_iter=10, random_state=42)\nX_clean = imp.fit_transform(X)'),
+      ] %}
+      {% for icon,name,sub,col,desc,code in methods %}
+      <div class="adv-acc">
+        <div class="adv-head" onclick="toggleAcc(this)">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:rgba(0,0,0,0.04);display:flex;align-items:center;justify-content:center;font-size:16px;">{{icon}}</div>
+            <div>
+              <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:0.92rem;color:var(--ink);">{{name}}</div>
+              <div style="font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace;">{{sub}}</div>
+            </div>
+          </div>
+          <svg class="adv-chevron" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+        <div class="adv-body">
+          <div style="padding:0 20px 20px;">
+            <p style="font-size:0.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px;">{{desc}}</p>
+            <div class="code-block">{{code}}</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+
+
+
+<!-- ══ SECTION 6: CODE COMPILER ══ -->
+<section class="mv-section" style="background:#0d1117;">
+  <div class="max-w-5xl mx-auto px-6">
+
+    <!-- Header -->
+    <div data-aos="fade-up" style="margin-bottom:32px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:4px 14px;border-radius:20px;background:rgba(13,148,136,0.15);color:var(--teal-lt);font-size:0.72rem;font-weight:600;font-family:\'DM Mono\',monospace;letter-spacing:0.08em;margin-bottom:16px;">
+        ⚡ Live Code Compiler
+      </div>
+      <h2 style="font-family:\'Sora\',sans-serif;font-size:clamp(1.75rem,3vw,2.2rem);font-weight:800;color:#fff;letter-spacing:-0.03em;margin-bottom:10px;">
+        Run Python. See Results. <span style="background:linear-gradient(135deg,var(--teal-lt),var(--sky));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Right Here.</span>
+      </h2>
+      <p style="color:#8898aa;font-size:0.95rem;max-width:560px;line-height:1.75;">
+        Every imputation technique — with a real DataFrame — ready to run. Edit the code, click Run, and see the output instantly.
+      </p>
+    </div>
+
+    <!-- Example tabs -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;" data-aos="fade-up" data-aos-delay="60">
+      <button class="ex-tab active" id="ex-0" onclick="loadExample(0)">📋 View Missing</button>
+      <button class="ex-tab" id="ex-1" onclick="loadExample(1)">📊 Mean Impute</button>
+      <button class="ex-tab" id="ex-2" onclick="loadExample(2)">📍 Median Impute</button>
+      <button class="ex-tab" id="ex-3" onclick="loadExample(3)">🏷️ Mode Impute</button>
+      <button class="ex-tab" id="ex-4" onclick="loadExample(4)">🗂️ Group-wise</button>
+      <button class="ex-tab" id="ex-5" onclick="loadExample(5)">🤖 KNN Imputer</button>
+      <button class="ex-tab" id="ex-6" onclick="loadExample(6)">🔬 MICE / Iterative</button>
+      <button class="ex-tab" id="ex-7" onclick="loadExample(7)">🗑️ Drop Columns</button>
+    </div>
+
+    <!-- Example description bar -->
+    <div id="ex-desc" style="background:#161b22;border:1px solid #30363d;border-radius:10px 10px 0 0;padding:12px 18px;font-size:0.82rem;color:#8898aa;border-bottom:none;display:flex;align-items:center;gap:8px;">
+      <span style="color:var(--teal-lt);font-weight:600;" id="ex-desc-title">📋 View Missing Data</span>
+      <span id="ex-desc-text">— Check which cells are NaN and how many are missing per column.</span>
+    </div>
+
+    <!-- Editor -->
+    <div style="position:relative;border:1px solid #30363d;border-top:none;border-radius:0 0 0 0;background:#0d1117;">
+      <!-- Top bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #21262d;background:#161b22;">
+        <div style="display:flex;gap:6px;">
+          <div style="width:12px;height:12px;border-radius:50%;background:#ff5f57;"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:#febc2e;"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:#28c840;"></div>
+        </div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:0.72rem;color:#8b949e;">missing_values.py</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onclick="clearOutput()" style="padding:4px 10px;font-size:0.72rem;border-radius:6px;border:1px solid #30363d;background:transparent;color:#8b949e;cursor:pointer;font-family:\'DM Mono\',monospace;">clear</button>
+          <button onclick="copyCode()" style="padding:4px 10px;font-size:0.72rem;border-radius:6px;border:1px solid #30363d;background:transparent;color:#8b949e;cursor:pointer;font-family:\'DM Mono\',monospace;" id="copy-btn">copy</button>
+          <button onclick="runCode()" id="run-btn" style="padding:6px 18px;font-size:0.8rem;border-radius:8px;border:none;background:linear-gradient(135deg,#0D9488,#0EA5E9);color:#fff;cursor:pointer;font-family:\'Sora\',sans-serif;font-weight:700;display:flex;align-items:center;gap:6px;transition:opacity 0.2s;">
+            <span id="run-icon">▶</span> Run
+          </button>
+        </div>
+      </div>
+      <!-- Code area -->
+      <textarea id="code-editor" spellcheck="false" style="
+        width:100%;min-height:280px;max-height:500px;
+        background:#0d1117;color:#e6edf3;
+        border:none;outline:none;resize:vertical;
+        padding:20px;
+        font-family:\'DM Mono\',monospace;font-size:0.82rem;line-height:1.75;
+        tab-size:4;
+      " placeholder="# Write your Python code here..."></textarea>
+    </div>
+
+    <!-- Output panel -->
+    <div style="border:1px solid #30363d;border-top:none;border-radius:0 0 12px 12px;background:#010409;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #21262d;background:#0d1117;">
+        <div style="font-family:\'DM Mono\',monospace;font-size:0.72rem;color:#8b949e;display:flex;align-items:center;gap:6px;">
+          <div style="width:7px;height:7px;border-radius:50%;background:#28c840;" id="status-dot"></div>
+          <span id="status-text">Ready</span>
+        </div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:0.68rem;color:#484f58;" id="exec-time"></div>
+      </div>
+      <pre id="code-output" style="
+        margin:0;padding:20px;
+        min-height:120px;max-height:360px;
+        overflow-y:auto;
+        font-family:\'DM Mono\',monospace;font-size:0.8rem;
+        line-height:1.75;color:#7ee787;
+        white-space:pre-wrap;word-break:break-word;
+        background:#010409;
+      ">▸ Output will appear here after you click Run...</pre>
+    </div>
+
+    <!-- Quick tips -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px;" data-aos="fade-up" data-aos-delay="100">
+      <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:0.72rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;font-family:\'DM Mono\',monospace;">numpy & pandas</div>
+        <div style="font-size:0.78rem;color:#8b949e;line-height:1.6;">Pre-imported as <code style="color:var(--teal-lt);">np</code> and <code style="color:var(--teal-lt);">pd</code> — no need to import them</div>
+      </div>
+      <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:0.72rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;font-family:\'DM Mono\',monospace;">10s timeout</div>
+        <div style="font-size:0.78rem;color:#8b949e;line-height:1.6;">Code runs in a sandboxed Python process with a 10-second time limit</div>
+      </div>
+      <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:0.72rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;font-family:\'DM Mono\',monospace;">Edit freely</div>
+        <div style="font-size:0.78rem;color:#8b949e;line-height:1.6;">Modify any example — experiment with different parameters to learn</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<style>
+.ex-tab{
+  padding:7px 14px;border-radius:8px;border:1px solid #30363d;
+  background:#161b22;color:#8b949e;font-size:0.78rem;font-weight:600;
+  cursor:pointer;transition:all 0.2s;font-family:\'DM Sans\',sans-serif;
+  white-space:nowrap;
+}
+.ex-tab:hover{border-color:#8b949e;color:#e6edf3;}
+.ex-tab.active{border-color:var(--teal);background:rgba(13,148,136,0.15);color:var(--teal-lt);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.running #run-icon{animation:blink 0.6s infinite;}
+</style>
+
+<script>
+/* ════════════════════════════════════════
+   CODE EXAMPLES
+════════════════════════════════════════ */
+const EXAMPLES = [
+
+  // 0 - View Missing
+  {
+    tab:'📋 View Missing',
+    title:'📋 View Missing Data',
+    desc:'— Check which cells are NaN and how many are missing per column.',
+    code:`# ── Create a realistic employee DataFrame ──────────────
+df = pd.DataFrame({
+    'name':   ['Alice','Bob','Carol','David','Emma','Frank','Grace','Henry'],
+    'age':    [28, None, 34, 29, 41, 36, None, 38],
+    'salary': [52, None, 68, None, 78, 61, 70, 65],
+    'dept':   ['Eng','Mkt','Eng','HR', None,'Mkt','Eng','HR'],
+    'score':  [87, 74, None, 91, 85, 78, 82, None]
+})
+
+print("=== DataFrame ===")
+print(df.to_string(index=False))
+
+print("=== Missing Values per Column ===")
+missing = df.isnull().sum()
+pct     = (df.isnull().mean() * 100).round(1)
+summary = pd.DataFrame({'Missing': missing, 'Percent %': pct})
+print(summary[summary['Missing'] > 0].to_string())
+
+print("=== Total missing cells ===")
+print(f"  {df.isnull().sum().sum()} out of {df.size} total cells")
+print(f"  Overall missing rate: {df.isnull().mean().mean()*100:.1f}%")`
+  },
+
+  // 1 - Mean Impute
+  {
+    tab:'📊 Mean Impute',
+    title:'📊 Mean Imputation',
+    desc:'— Fill numeric NaNs with the column average. Best for normally distributed data without outliers.',
+    code:`# ── Dataset with missing numeric values ────────────────
+df = pd.DataFrame({
+    'name':   ['Alice','Bob','Carol','David','Emma','Frank','Grace','Henry'],
+    'age':    [28, None, 34, 29, 41, 36, None, 38],
+    'salary': [52, None, 68, None, 78, 61, 70, 65],
+    'score':  [87, 74, None, 91, 85, 78, 82, None]
+})
+
+print("=== BEFORE imputation ===")
+print(df[['name','age','salary','score']].to_string(index=False))
+
+# ── Mean imputation ─────────────────────────────────────
+numeric_cols = ['age','salary','score']
+df_mean = df.copy()
+for col in numeric_cols:
+    col_mean = df_mean[col].mean()
+    df_mean[col] = df_mean[col].fillna(round(col_mean, 1))
+    print(f"  {col}: mean = {col_mean:.2f} -> filled NaNs with {round(col_mean,1)}")
+
+print("=== AFTER mean imputation ===")
+print(df_mean[['name','age','salary','score']].to_string(index=False))
+
+print("   Note: Mean is sensitive to outliers.")
+print("   If salary had an extreme value (e.g. £500k),")
+print("   the mean would be inflated and give a poor fill.")`
+  },
+
+  // 2 - Median Impute
+  {
+    tab:'📍 Median Impute',
+    title:'📍 Median Imputation',
+    desc:'— Robust to outliers. Use when data is skewed or has extreme values.',
+    code:`# ── Dataset — note the outlier salary (£500k) ──────────
+df = pd.DataFrame({
+    'name':   ['Alice','Bob','Carol','David','Emma','Frank','CEO'],
+    'salary': [52, None, 68, None, 61, 58, 500],   # CEO is outlier!
+    'score':  [87, 74, None, 91, 78, 82, None]
+})
+
+print("=== Dataset (with outlier) ===")
+print(df.to_string(index=False))
+
+mean_sal   = df['salary'].mean()
+median_sal = df['salary'].median()
+
+print(f"  Salary mean:   £{mean_sal:.1f}k  <-pulled HIGH by CEO outlier")
+print(f"  Salary median: £{median_sal:.1f}k  <-robust, ignores outlier")
+
+# ── Mean vs Median imputation comparison ────────────────
+df_mean   = df.copy()
+df_median = df.copy()
+df_mean['salary']   = df_mean['salary'].fillna(round(mean_sal,1))
+df_median['salary'] = df_median['salary'].fillna(round(median_sal,1))
+
+print("=== Mean vs Median fill for Bob and David ===")
+print(f"  Bob (mean):   £{df_mean.loc[1,'salary']}k")
+print(f"  Bob (median): £{df_median.loc[1,'salary']}k  <-more realistic!")
+print(f" Use median when data has outliers or is right-skewed (income, prices).")`
+  },
+
+  // 3 - Mode Impute
+  {
+    tab:'🏷️ Mode Impute',
+    title:'🏷️ Mode Imputation',
+    desc:'— Best for categorical columns. Fills with the most frequent value.',
+    code:`# ── Dataset with categorical missing values ─────────────
+df = pd.DataFrame({
+    'name':   ['Alice','Bob','Carol','David','Emma','Frank','Grace','Henry'],
+    'dept':   ['Engineering','Marketing','Engineering','HR',None,'Marketing','Engineering',None],
+    'level':  ['Senior','Junior','Senior',None,'Mid','Junior',None,'Mid'],
+    'score':  [87, 74, 91, 85, 78, 82, 88, None]
+})
+
+print("=== Dataset ===")
+print(df.to_string(index=False))
+
+# ── Mode imputation ──────────────────────────────────────
+for col in ['dept','level','score']:
+    mode_val = df[col].mode()[0]
+    count    = df[col].value_counts().iloc[0]
+    missing  = df[col].isnull().sum()
+    print(f"  {col}:")
+    print(f"    Most frequent (mode): '{mode_val}' — appears {count}x")
+    print(f"    Missing: {missing} -> will fill with '{mode_val}'")
+    df[col] = df[col].fillna(mode_val)
+
+print("=== AFTER mode imputation ===")
+print(df.to_string(index=False))
+print("  For numeric data, mode only works well if values are discrete.")
+print("   For continuous salary/age, prefer mean or median.")`
+  },
+
+  // 4 - Group-wise
+  {
+    tab:'🗂️ Group-wise',
+    title:'🗂️ Group-wise (Segmented) Imputation',
+    desc:'— Impute within groups for more accurate results. E.g. fill salary by department median.',
+    code:`# ── Why global median fails ──────────────────────────────
+df = pd.DataFrame({
+    'name':   ['Alice','Bob','Carol','David','Emma','Frank','Grace'],
+    'dept':   ['Engineering','Engineering','Marketing','Marketing','HR','HR','Engineering'],
+    'salary': [85, None, 52, None, 38, 42, None]
+})
+
+print("=== Dataset ===")
+print(df.to_string(index=False))
+
+global_median = df['salary'].median()
+print(f"  Global salary median: £{global_median}k")
+print("    Bob is in Engineering (typically £80-90k)")
+print("     Global median (£52k) would seriously underfill his salary!")
+
+# ── Group-wise median ────────────────────────────────────
+print("=== Department medians ===")
+dept_medians = df.groupby('dept')['salary'].median()
+print(dept_medians.to_string())
+
+df_grouped = df.copy()
+df_grouped['salary'] = df_grouped.groupby('dept')['salary'].transform(
+    lambda x: x.fillna(x.median())
+)
+
+print("=== AFTER group-wise imputation ===")
+print(df_grouped.to_string(index=False))
+print(" Much more realistic:")
+print("   Bob (Eng):   £85k  <-uses Engineering median, not global")
+print("   Carol (Mkt): £52k  <-correct for Marketing")
+print("   Grace (Eng): £85k  <-correct for Engineering")`
+  },
+
+  // 5 - KNN
+  {
+    tab:'🤖 KNN Imputer',
+    title:'🤖 KNN Imputer',
+    desc:'— Uses k nearest neighbours to fill missing values. Context-aware and smart.',
+    code:`from sklearn.impute import KNNImputer
+
+# ── Dataset — numeric columns only for KNN ───────────────
+df = pd.DataFrame({
+    'name':   ['Alice','Bob','Carol','David','Emma','Frank'],
+    'age':    [28, 32, None, 29, 41, 36],
+    'salary': [52, None, 68, 55, 78, None],
+    'score':  [87, 74, 91, None, 85, 78],
+    'hours':  [40, 42, 40, 41, None, 38]
+})
+
+print("=== BEFORE KNN imputation ===")
+print(df.to_string(index=False))
+
+# KNN works on numeric columns only
+numeric = ['age','salary','score','hours']
+imputer = KNNImputer(n_neighbors=3)
+
+df_knn = df.copy()
+df_knn[numeric] = imputer.fit_transform(df[numeric])
+df_knn[numeric] = df_knn[numeric].round(1)
+
+print("=== AFTER KNN imputation (k=3) ===")
+print(df_knn.to_string(index=False))
+
+print(" KNN explains its logic:")
+print("   For Carol's age -> finds 3 most similar rows (by salary/score/hours)")
+print("   -> takes average of their ages")
+print("   This is much smarter than a global mean!")`
+  },
+
+  // 6 - MICE
+  {
+    tab:'🔬 MICE / Iterative',
+    title:'🔬 Iterative Imputer (MICE)',
+    desc:'— The gold standard. Models each feature using all others. Best for MAR data.',
+    code:`from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+
+# ── Dataset with multiple missing columns ────────────────
+df = pd.DataFrame({
+    'age':    [28, 32, None, 29, 41, 36, None, 38],
+    'salary': [52, None, 68, 55, 78, None, 70, 65],
+    'score':  [87, 74, 91, None, 85, 78, 82, None],
+    'hours':  [40, 42, 40, 41, None, 38, 39, 42]
+})
+
+print("=== BEFORE — missing values ===")
+print(df.to_string())
+print(f"  Total NaNs: {df.isnull().sum().sum()}")
+
+# ── Iterative imputation ─────────────────────────────────
+imp = IterativeImputer(
+    max_iter=10,       # 10 rounds of modelling
+    random_state=42,
+    verbose=0
+)
+
+df_mice = pd.DataFrame(
+    imp.fit_transform(df),
+    columns=df.columns
+).round(1)
+
+print("=== AFTER MICE imputation ===")
+print(df_mice.to_string())
+
+print(" How MICE works:")
+print("   Round 1: Fill all NaNs with mean as starting point")
+print("   Round 2: For each missing col, train regression on others -> predict")
+print("   Round 3-10: Repeat, updating each column's model iteratively")
+print("   Result: More accurate than mean/median — captures feature relationships")`
+  },
+
+  // 7 - Drop Columns
+  {
+    tab:'🗑️ Drop Columns',
+    title:'🗑️ Dropping High-Missing Columns',
+    desc:'— When imputation would introduce more noise than signal. Use threshold-based dropping.',
+    code:`# ── Dataset with badly corrupted columns ────────────────
+df = pd.DataFrame({
+    'age':       [28, 32, 34, None, 41, 36, None, 38],         # 25% missing
+    'salary':    [52, None, 68, 55, None, None, 70, 65],        # 37.5% missing
+    'bonus':     [None, None, None, None, 12, None, None, None],# 87.5% missing!
+    'score':     [87, 74, 91, None, 85, 78, 82, None],          # 25% missing
+    'dept_code': [None, None, 2, None, None, None, 3, None],    # 75% missing!
+})
+
+print("=== Missing % per column ===")
+missing_pct = (df.isnull().mean() * 100).round(1)
+for col, pct in missing_pct.items():
+    flag = "DROP" if pct > 50 else ("CONSIDER" if pct > 25 else " IMPUTE")
+    bar  = "|" * int(pct/5)
+    print(f"  {col:12s} {pct:5.1f}%  {bar:20s} {flag}")
+
+# ── Apply threshold-based dropping ──────────────────────
+THRESHOLD = 0.50   # drop if > 50% missing
+cols_to_drop = missing_pct[missing_pct > THRESHOLD*100].index.tolist()
+df_clean = df.drop(columns=cols_to_drop)
+
+print(f"  Threshold: {int(THRESHOLD*100)}%")
+print(f"  Dropped columns: {cols_to_drop}")
+print(f"  Kept columns:    {df_clean.columns.tolist()}")
+
+print("=== Remaining DataFrame ===")
+print(df_clean.to_string())
+
+print("  Now impute the remaining missing values normally:")
+df_clean['age']    = df_clean['age'].fillna(df_clean['age'].median())
+df_clean['salary'] = df_clean['salary'].fillna(df_clean['salary'].median())
+df_clean['score']  = df_clean['score'].fillna(df_clean['score'].median())
+print("=== Fully clean DataFrame ===")
+print(df_clean.to_string())`
+  },
+];
+
+let currentExample = 0;
+
+function loadExample(i){
+  currentExample = i;
+  const ex = EXAMPLES[i];
+  document.querySelectorAll('.ex-tab').forEach((t,ti)=>t.classList.toggle('active',ti===i));
+  document.getElementById('code-editor').value = ex.code;
+  document.getElementById('ex-desc-title').textContent = ex.title;
+  document.getElementById('ex-desc-text').textContent  = ex.desc;
+  clearOutput();
+  // auto-resize
+  const ta = document.getElementById('code-editor');
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 500) + 'px';
+}
+
+async function runCode(){
+  const btn  = document.getElementById('run-btn');
+  const out  = document.getElementById('code-output');
+  const dot  = document.getElementById('status-dot');
+  const stat = document.getElementById('status-text');
+  const time = document.getElementById('exec-time');
+  const code = document.getElementById('code-editor').value;
+
+  btn.classList.add('running');
+  btn.disabled = true;
+  dot.style.background  = '#F59E0B';
+  stat.textContent      = 'Running…';
+  out.style.color       = '#8b949e';
+  out.textContent       = '⟳  Executing…';
+  time.textContent      = '';
+
+  const t0 = Date.now();
+  try {
+    const r = await fetch('/api/run-code',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({code})
+    });
+    const d  = await r.json();
+    const ms = Date.now() - t0;
+    time.textContent = `${ms}ms`;
+
+    if(d.error && d.error.trim()){
+      out.style.color  = '#ff7b72';
+      dot.style.background = '#F43F5E';
+      stat.textContent = 'Error';
+      out.textContent  = '✗  ' + d.error.trim();
+      if(d.output && d.output.trim())
+        out.textContent += '\n\n' + d.output.trim();
+    } else {
+      out.style.color  = '#7ee787';
+      dot.style.background = '#28c840';
+      stat.textContent = 'Done ✓';
+      out.textContent  = d.output.trim() || '(no output)';
+    }
+  } catch(err){
+    out.style.color = '#ff7b72';
+    dot.style.background = '#F43F5E';
+    stat.textContent = 'Error';
+    out.textContent = '✗  Network error: ' + err.message;
+  } finally {
+    btn.classList.remove('running');
+    btn.disabled = false;
+  }
+}
+
+function clearOutput(){
+  const out = document.getElementById('code-output');
+  out.style.color = '#8b949e';
+  out.textContent = '▸ Output will appear here after you click Run...';
+  document.getElementById('status-dot').style.background = '#28c840';
+  document.getElementById('status-text').textContent = 'Ready';
+  document.getElementById('exec-time').textContent = '';
+}
+
+async function copyCode(){
+  const code = document.getElementById('code-editor').value;
+  try {
+    await navigator.clipboard.writeText(code);
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'copied!';
+    btn.style.color = '#7ee787';
+    setTimeout(()=>{ btn.textContent='copy'; btn.style.color=''; }, 1800);
+  } catch(e){}
+}
+
+// Tab key inserts spaces in editor
+// editor init moved to main DOMContentLoaded below
+</script>
+
+
+<!-- ══ NAV ══ -->
+<div class="max-w-5xl mx-auto px-6 py-10">
+  <div class="nav-btns">
+    <a href="/" class="btn-outline">🏠 Home</a>
+    <a href="/duplicates" class="btn-primary">Next: Duplicates →</a>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+/* ════════════════════════════════════════
+   DATASET + IMPUTATION PLAYGROUND
+════════════════════════════════════════ */
+const DATASET = [
+  {name:'Alice',  age:28,   salary:52,   dept:'Engineering', score:87},
+  {name:'Bob',    age:null, salary:null,  dept:'Marketing',   score:74},
+  {name:'Carol',  age:34,   salary:68,   dept:'Engineering', score:null},
+  {name:'David',  age:29,   salary:null,  dept:'HR',          score:91},
+  {name:'Emma',   age:41,   salary:78,   dept:null,          score:85},
+  {name:'Frank',  age:36,   salary:61,   dept:'Marketing',   score:78},
+  {name:'Grace',  age:null, salary:70,   dept:'Engineering', score:82},
+  {name:'Henry',  age:38,   salary:65,   dept:'HR',          score:null},
+];
+
+const METHOD_INFO = {
+  mean:{
+    title:'📊 Mean Imputation',
+    desc:'Fills missing numbers with the column average. Fast and simple but sensitive to extreme values — one outlier can skew every imputed cell.',
+    code:'df[\'col\'].fillna(df[\'col\'].mean())',
+  },
+  median:{
+    title:'📍 Median Imputation',
+    desc:'Uses the middle value of sorted data — robust to outliers. Ideal for skewed columns like salary or house prices.',
+    code:'df[\'col\'].fillna(df[\'col\'].median())',
+  },
+  mode:{
+    title:'🏷️ Mode Imputation',
+    desc:'Fills with the most frequent value. Essential for categorical columns (Department, City, Grade). Also works for discrete numeric data.',
+    code:'df[\'col\'].fillna(df[\'col\'].mode()[0])',
+  },
+  knn:{
+    title:'🤖 KNN Imputation',
+    desc:'Finds k most similar rows using all other features and averages their values. Context-aware and much smarter than global statistics.',
+    code:'from sklearn.impute import KNNImputer\nimp = KNNImputer(n_neighbors=3)\nX_clean = imp.fit_transform(X)',
+  },
+};
+
+let tableData = DATASET.map(r => ({...r}));
+let filledCells = {};   // key = "rowIdx-col", value = method used
+let currentMethod = 'mean';
+
+/* ─── Compute imputation value for a column ─── */
+function getImputedValue(col, method) {
+  const numVals = DATASET.map(r => r[col]).filter(v => v !== null && typeof v === 'number');
+  const strVals = DATASET.map(r => r[col]).filter(v => v !== null && typeof v === 'string');
+
+  if (method === 'mode') {
+    // mode works on any type
+    const allVals = [...numVals, ...strVals];
+    const freq = {};
+    allVals.forEach(v => freq[v] = (freq[v] || 0) + 1);
+    return Object.entries(freq).sort((a,b) => b[1]-a[1])[0]?.[0];
+  }
+  if (!numVals.length) return null;
+
+  const sorted = [...numVals].sort((a,b) => a-b);
+  if (method === 'mean')   return +(numVals.reduce((a,b)=>a+b,0)/numVals.length).toFixed(1);
+  if (method === 'median') {
+    const mid = Math.floor(sorted.length/2);
+    return sorted.length%2===0 ? +((sorted[mid-1]+sorted[mid])/2).toFixed(1) : sorted[mid];
+  }
+  if (method === 'knn') {
+    // Simulate KNN: use weighted mean of closest rows (by other numeric cols)
+    const TARGET_COLS = {age:['salary','score'], salary:['age','score'], score:['age','salary']};
+    const neighbours = TARGET_COLS[col] || ['age','salary','score'];
+    let weightedSum = 0, weightTotal = 0;
+    DATASET.forEach(row => {
+      if (row[col] === null) return;
+      let dist = 0, dims = 0;
+      neighbours.forEach(nc => {
+        if (row[nc] !== null) {
+          const colVals = DATASET.map(r=>r[nc]).filter(v=>v!==null);
+          const colMean = colVals.reduce((a,b)=>a+b,0)/colVals.length;
+          const colStd  = Math.sqrt(colVals.reduce((a,b)=>a+(b-colMean)**2,0)/colVals.length) || 1;
+          dist += ((row[nc]-colMean)/colStd)**2; dims++;
+        }
+      });
+      const similarity = dims > 0 ? 1/(1+Math.sqrt(dist/dims)) : 0.5;
+      weightedSum  += row[col] * similarity;
+      weightTotal  += similarity;
+    });
+    return weightTotal > 0 ? +(weightedSum/weightTotal).toFixed(1) : +(numVals.reduce((a,b)=>a+b,0)/numVals.length).toFixed(1);
+  }
+  return +(numVals.reduce((a,b)=>a+b,0)/numVals.length).toFixed(1);
+}
+
+/* ─── Select method tab ─── */
+function selectMethod(m) {
+  currentMethod = m;
+  ['mean','median','mode','knn'].forEach(x =>
+    document.getElementById('mt-'+x).classList.toggle('active', x===m)
+  );
+  const info = METHOD_INFO[m];
+  document.getElementById('mi-title').textContent = info.title;
+  document.getElementById('mi-desc').textContent  = info.desc;
+  document.getElementById('mi-code').textContent  = info.code;
+  renderTable();
+  renderPctBars();
+}
+
+/* ─── Render the full table ─── */
+function renderTable() {
+  const tbody = document.getElementById('pg-tbody');
+  tbody.innerHTML = '';
+  let missing = 0;
+
+  DATASET.forEach((row, ri) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="color:var(--muted);font-size:0.72rem;">${ri+1}</td>
+                    <td style="font-weight:600;">${row.name}</td>`;
+    ['age','salary','dept','score'].forEach(col => {
+      const td  = document.createElement('td');
+      const key = `${ri}-${col}`;
+
+      if (tableData[ri][col] === null) {
+        // Still missing
+        missing++;
+        td.className = 'cell-missing';
+        td.innerHTML = `<span style="cursor:pointer;" title="Click to impute with ${currentMethod}">NaN</span>`;
+        td.onclick = () => doImpute(ri, col, td);
+      } else if (filledCells[key]) {
+        // Was imputed
+        td.className = 'cell-imputed';
+        td.textContent = tableData[ri][col];
+        td.title = `Imputed with ${filledCells[key]}`;
+      } else {
+        // Original value
+        td.textContent = row[col];
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('missing-count').textContent = `${missing} missing value${missing!==1?'s':''}`;
+  updateFillProgress();
+  renderColStats();
+}
+
+/* ─── Impute a single cell ─── */
+function doImpute(ri, col, td) {
+  const val = getImputedValue(col, currentMethod);
+  tableData[ri][col] = val;
+  filledCells[`${ri}-${col}`] = currentMethod;
+  td.className = 'cell-imputed';
+  td.textContent = val;
+  td.onclick = null;
+  td.title = `Imputed with ${currentMethod}: ${val}`;
+
+  let missing = 0;
+  DATASET.forEach((row,i) => ['age','salary','dept','score'].forEach(c => { if(tableData[i][c]===null) missing++; }));
+  document.getElementById('missing-count').textContent = `${missing} missing value${missing!==1?'s':''}`;
+  updateFillProgress();
+  renderColStats();
+  renderPctBars();
+}
+
+/* ─── Column stats strip ─── */
+function renderColStats() {
+  const cols = [{col:'age',label:'Age'},{col:'salary',label:'Salary'},{col:'score',label:'Score'}];
+  document.getElementById('col-stats').innerHTML = cols.map(({col,label}) => {
+    const vals = DATASET.map(r=>r[col]).filter(v=>v!==null && typeof v==='number');
+    const mean = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+    const sorted=[...vals].sort((a,b)=>a-b);
+    const mid=Math.floor(sorted.length/2);
+    const median=sorted.length%2===0?((sorted[mid-1]+sorted[mid])/2).toFixed(1):sorted[mid];
+    return `<span style="font-size:0.7rem;font-family:'DM Mono',monospace;background:var(--subtle);padding:3px 8px;border-radius:6px;border:1px solid var(--border);">
+      <span style="color:var(--muted);">${label}:</span>
+      μ=${mean} · med=${median}
+    </span>`;
+  }).join('');
+}
+
+/* ─── Fill progress ─── */
+function updateFillProgress() {
+  const total = DATASET.reduce((n,r) => n + ['age','salary','dept','score'].filter(c=>r[c]===null).length, 0);
+  const done  = Object.keys(filledCells).length;
+  document.getElementById('fill-progress').textContent = done > 0 ? `${done}/${total} filled` : '';
+}
+
+/* ─── Missing % bars ─── */
+function renderPctBars() {
+  const colDef = [
+    {col:'age',   label:'Age',         color:'var(--sky)'},
+    {col:'salary',label:'Salary (£k)', color:'var(--teal)'},
+    {col:'dept',  label:'Department',  color:'var(--violet)'},
+    {col:'score', label:'Score',       color:'var(--pink)'},
+  ];
+  document.getElementById('pct-bars').innerHTML = colDef.map(({col,label,color}) => {
+    const remaining = tableData.filter(r => r[col]===null).length;
+    const pct = Math.round((remaining/tableData.length)*100);
+    const barColor = pct>40?'var(--red)':pct>15?'#F59E0B':color;
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <div style="min-width:110px;font-size:0.78rem;font-weight:600;color:var(--ink);">${label}</div>
+      <div style="flex:1;height:22px;background:var(--subtle);border-radius:8px;overflow:hidden;border:1px solid var(--border);">
+        <div style="width:${pct}%;height:100%;background:${barColor};border-radius:8px;display:flex;align-items:center;padding-left:8px;transition:width 0.5s ease;">
+          <span style="font-size:0.68rem;font-weight:700;color:#fff;font-family:'DM Mono',monospace;">${pct>10?pct+'%':''}</span>
+        </div>
+      </div>
+      <div style="min-width:32px;font-size:0.73rem;font-family:'DM Mono',monospace;color:${pct>40?'var(--red)':pct>15?'#B45309':'var(--muted)'};">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+/* ─── Reset ─── */
+function resetAll() {
+  tableData   = DATASET.map(r => ({...r}));
+  filledCells = {};
+  renderTable();
+  renderPctBars();
+}
+
+/* ════════════════════════════════════════
+   SCENARIO EXPLORER
+════════════════════════════════════════ */
+/* ════════════════════════════════════════
+   SCENARIO EXPLORER
+════════════════════════════════════════ */
+const SCENARIOS={
+  mcar:{
+    color:'var(--teal)', border:'active-mcar',
+    title:'🎲 MCAR — Missing Completely at Random',
+    story:'A health survey was printed and distributed. Some participants accidentally skipped page 3, which contained the blood pressure questions.',
+    pattern:'There\'s no relationship between who skipped and their health status — it was truly random.',
+    visual:[
+      {name:'Alice',bp:'120/80',highlight:false},
+      {name:'Bob',  bp:'NaN',  highlight:true},
+      {name:'Carol',bp:'118/75',highlight:false},
+      {name:'David',bp:'NaN',  highlight:true},
+      {name:'Emma', bp:'125/82',highlight:false},
+    ],
+    fix:'Any imputation method works. Mean, median, or model-based all acceptable.',
+    fixColor:'rgba(13,148,136,0.08)',fixBorder:'rgba(13,148,136,0.3)',fixText:'var(--teal)',
+  },
+  mar:{
+    color:'#B45309', border:'active-mar',
+    title:'🔗 MAR — Missing at Random',
+    story:'In a salary survey, older employees are more likely to leave the salary field blank — not because of their salary amount, but because of their age (older workers are more private).',
+    pattern:'Age (observed) predicts missingness in salary. Not random — but not related to salary itself.',
+    visual:[
+      {name:'Alice (28)',salary:'£52k',highlight:false},
+      {name:'Bob (55)',  salary:'NaN', highlight:true},
+      {name:'Carol (32)',salary:'£61k',highlight:false},
+      {name:'David (58)',salary:'NaN', highlight:true},
+      {name:'Emma (30)', salary:'£48k',highlight:false},
+    ],
+    fix:'Use model-based imputation: KNN or MICE. They leverage other columns (like age) to predict salary.',
+    fixColor:'rgba(245,158,11,0.06)',fixBorder:'rgba(245,158,11,0.3)',fixText:'#B45309',
+  },
+  mnar:{
+    color:'var(--red)', border:'active-mnar',
+    title:'⚠️ MNAR — Missing Not at Random',
+    story:'Patients with high cholesterol levels are less likely to report their cholesterol in surveys — because they\'re embarrassed or in denial.',
+    pattern:'The missing value itself (high cholesterol) causes the missingness. Cannot be fixed by looking at other columns.',
+    visual:[
+      {name:'Alice',chol:'185',highlight:false},
+      {name:'Bob',  chol:'NaN',highlight:true},
+      {name:'Carol',chol:'172',highlight:false},
+      {name:'David',chol:'NaN',highlight:true},
+      {name:'Emma', chol:'168',highlight:false},
+    ],
+    fix:'No perfect solution. Flag as missing, collect more data, or use domain knowledge. Imputation will be biased.',
+    fixColor:'rgba(244,63,94,0.06)',fixBorder:'rgba(244,63,94,0.3)',fixText:'var(--red)',
+  },
+};
+
+function showScenario(type){
+  ['mcar','mar','mnar'].forEach(t=>{
+    const el=document.getElementById('sc-'+t);
+    el.classList.remove('active-mcar','active-mar','active-mnar');
+  });
+  document.getElementById('sc-'+type).classList.add(SCENARIOS[type].border);
+  const s=SCENARIOS[type];
+  const visHTML=s.visual.map(r=>{
+    const [col]=Object.keys(r).filter(k=>k!=='name'&&k!=='highlight');
+    const val=r[col];
+    const isMissing=val==='NaN';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:10px;background:${isMissing?'rgba(244,63,94,0.06)':'var(--subtle)'};border:1px solid ${isMissing?'rgba(244,63,94,0.25)':'var(--border)'};">
+      <div style="font-weight:600;font-size:0.82rem;color:var(--ink);min-width:100px;">${r.name}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.82rem;color:${isMissing?'var(--red)':'var(--teal)'};font-weight:700;">${val}</div>
+      ${isMissing?'<span style="font-size:0.68rem;color:var(--red);background:rgba(244,63,94,0.1);padding:2px 6px;border-radius:20px;">missing</span>':''}
+    </div>`;
+  }).join('');
+  document.getElementById('scenario-detail').style.display='block';
+  document.getElementById('scenario-box').innerHTML=`
+    <div style="margin-bottom:16px;">
+      <h3 style="font-family:'Sora',sans-serif;font-weight:800;font-size:1.1rem;color:${s.color};margin-bottom:8px;">${s.title}</h3>
+      <p style="font-size:0.88rem;color:var(--muted);line-height:1.7;margin-bottom:4px;"><strong style="color:var(--ink);">Scenario:</strong> ${s.story}</p>
+      <p style="font-size:0.88rem;color:var(--muted);line-height:1.7;"><strong style="color:var(--ink);">Pattern:</strong> ${s.pattern}</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">${visHTML}</div>
+    <div style="padding:14px 16px;border-radius:12px;background:${s.fixColor};border:1.5px solid ${s.fixBorder};">
+      <strong style="color:${s.fixText};font-size:0.82rem;">💡 Recommended fix:</strong>
+      <span style="font-size:0.82rem;color:var(--ink);margin-left:6px;">${s.fix}</span>
+    </div>`;
+  document.getElementById('scenario-detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+/* ════════════════════════════════════════
+   DECISION TREE SLIDER
+════════════════════════════════════════ */
+function updateDecisionTree(val){
+  val=parseInt(val);
+  const slider=document.getElementById('pct-slider');
+  slider.style.setProperty('--val',val+'%');
+  const display=document.getElementById('pct-display');
+  display.textContent=val+'%';
+  display.style.color=val>40?'var(--red)':val>15?'#B45309':'var(--teal)';
+
+  const nodes=['dt-impute-simple','dt-impute-smart','dt-drop'];
+  nodes.forEach(n=>document.getElementById(n).className='dt-node dimmed');
+
+  let rec,recColor,recBg,active;
+  if(val<=10){
+    active='dt-impute-simple';
+    rec=' Use simple imputation — Mean, Median, or Mode. Low missingness means the impact on your model will be minimal.';
+    recColor='var(--teal)';recBg='rgba(13,148,136,0.06)';
+  } else if(val<=40){
+    active='dt-impute-smart';
+    rec='🤖 Use smart imputation — KNN, MICE, or Regression-based. The column still has useful signal but needs a smarter approach.';
+    recColor='#B45309';recBg='rgba(245,158,11,0.06)';
+  } else {
+    active='dt-drop';
+    rec='🗑️ Consider dropping this column. More than 40% missing means imputed values may introduce more noise than signal.';
+    recColor='var(--red)';recBg='rgba(244,63,94,0.06)';
+  }
+  document.getElementById(active).className='dt-node highlight';
+  const box=document.getElementById('dt-recommendation');
+  box.style.background=recBg;
+  box.style.border=`1.5px solid ${recColor}`;
+  box.style.color=recColor;
+  box.textContent=rec;
+}
+
+/* ════════════════════════════════════════
+   ADVANCED ACCORDION
+════════════════════════════════════════ */
+function toggleAcc(head){
+  const body=head.nextElementSibling;
+  const open=body.classList.contains('open');
+  document.querySelectorAll('.adv-body').forEach(b=>b.classList.remove('open'));
+  document.querySelectorAll('.adv-head').forEach(h=>h.classList.remove('open'));
+  if(!open){body.classList.add('open');head.classList.add('open');}
+}
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  // ── Playground table ──
+  selectMethod('mean');
+  // ── Decision guide ──
+  updateDecisionTree(30);
+  // ── Code compiler ──
+  loadExample(0);
+  const editor = document.getElementById('code-editor');
+  if (editor) {
+    editor.addEventListener('keydown', e => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const s = editor.selectionStart, en = editor.selectionEnd;
+        editor.value = editor.value.substring(0,s) + '    ' + editor.value.substring(en);
+        editor.selectionStart = editor.selectionEnd = s + 4;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault(); runCode();
+      }
+    });
+    editor.addEventListener('input', () => {
+      editor.style.height = 'auto';
+      editor.style.height = Math.min(editor.scrollHeight, 500) + 'px';
+    });
+  }
+});
+</script>
+{% endblock %}
